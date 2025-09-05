@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+@theme {
+  /*
+  ==========================================================================
+  THEME CONFIGURATION
+  ==========================================================================
+  - See: https://tailwindcss.com/docs/theme
+  */
+  --breakpoint-xs: 30rem;
+  --breakpoint-3xl: 120rem;
+}
+
+@layer base {
+  /*
+  ==========================================================================
+  BASE STYLES
+  ==========================================================================
+  - See: https://tailwindcss.com/docs/adding-custom-styles#adding-base-styles
+  */
+  * {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+}
+
+@layer components {
+  /*
+  ==========================================================================
+  COMPONENT STYLES
+  ==========================================================================
+  - Reusable UI components.
+  - Improve code readability and maintainability.
+  */
+}

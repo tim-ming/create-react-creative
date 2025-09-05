@@ -2,538 +2,71 @@
 
 import path from "node:path";
 import fs from "fs-extra";
-import process, { exit } from "node:process";
+import process from "node:process";
 import { fileURLToPath } from "node:url";
 import * as p from "@clack/prompts";
 import { execa } from "execa";
-import ora from "ora";
 import kleur from "kleur";
-import yargsParser from "yargs-parser";
-
+import OPTIONS, { NONE } from "./constants.js";
+import type { PackageManagerPackage, PackageOption } from "./types.js";
+import { parse } from "jsonc-parser";
+import {
+  copyDirSafe,
+  detectDefaultPM,
+  ensurePmAvailable,
+  extractExportName,
+  flattenObjectValues,
+  getAllRelativeFilePaths,
+  parseFlags,
+} from "./helpers.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
+const SCAFFOLD_ROOT = path.resolve(
+  __dirname,
+  "../src/development/src/scaffold"
+);
 interface WizardState {
   projectName: string;
   packageManager: PackageManagerPackage;
-  useTailwind: boolean;
-  animation: AnimationPackage;
-  stateManagement: StateManagementPackage;
-  three: ThreePackage;
-  reactThree: ReactThreePackage[];
-  creative: CreativePackage[];
-}
-interface PackageOption {
-  name: string;
-  packageName: string;
-  importStatement: string;
-  cli: {
-    color: kleur.Color;
-    displayName: string;
-    hint: string;
-    description: string;
+  scaffold: {
+    animation: PackageOption;
+    stateManagement: PackageOption;
+    three: PackageOption;
+    reactThree: PackageOption[];
+    creative: PackageOption[];
   };
 }
 
-interface PackageManagerConfig {
-  install: string[];
-  add: (dev: boolean) => string[];
-  addPkgs: (pkgs: string[], dev: boolean) => string[];
-  createVite: (projectName: string) => string[];
-  runDev: string;
-}
-
-type PackageManagerPackage = Omit<PackageOption, "importStatement"> & {
-  commands: PackageManagerConfig;
-};
-
-type AnimationPackage = PackageOption;
-type StateManagementPackage = PackageOption;
-type ThreePackage = PackageOption;
-type CreativePackage = PackageOption;
-type ReactThreePackage = PackageOption;
-
-const NONE: Readonly<PackageOption> = {
-  name: "none",
-  packageName: "",
-  importStatement: "",
-  cli: {
-    color: kleur.gray,
-    displayName: "none",
-    hint: "",
-    description: "",
-  },
-};
-
-// ---------------- Package Managers ----------------
-const PACKAGE_MANAGERS: ReadonlyArray<Readonly<PackageManagerPackage>> = [
-  {
-    name: "npm",
-    packageName: "npm",
-    cli: {
-      displayName: "npm",
-      description: "Node Package Manager",
-      hint: "",
-      color: kleur.red,
-    },
-    commands: {
-      install: ["install"],
-      add: (dev) => (dev ? ["install", "-D"] : ["install"]),
-      addPkgs: (pkgs, dev) =>
-        dev ? ["install", "-D", ...pkgs] : ["install", ...pkgs],
-      createVite: (projectName) => [
-        "create",
-        "vite@latest",
-        projectName,
-        "--",
-        "--template",
-        "react-ts",
-      ],
-      runDev: "npm run dev",
-    },
-  },
-  {
-    name: "pnpm",
-    packageName: "pnpm",
-    cli: {
-      displayName: "pnpm",
-      description: "PNPM",
-      hint: "",
-      color: kleur.magenta,
-    },
-    commands: {
-      install: ["install"],
-      add: (dev) => (dev ? ["add", "-D"] : ["add"]),
-      addPkgs: (pkgs, dev) => (dev ? ["add", "-D", ...pkgs] : ["add", ...pkgs]),
-      createVite: (projectName) => [
-        "create",
-        "vite",
-        projectName,
-        "--template",
-        "react-ts",
-      ],
-      runDev: "pnpm dev",
-    },
-  },
-  {
-    name: "yarn",
-    packageName: "yarn",
-    cli: {
-      displayName: "yarn",
-      description: "Yarn",
-      hint: "",
-      color: kleur.cyan,
-    },
-    commands: {
-      install: ["install"],
-      add: (dev) => (dev ? ["add", "-D"] : ["add"]),
-      addPkgs: (pkgs, dev) => (dev ? ["add", "-D", ...pkgs] : ["add", ...pkgs]),
-      createVite: (projectName) => [
-        "create",
-        "vite",
-        projectName,
-        "--template",
-        "react-ts",
-      ],
-      runDev: "yarn dev",
-    },
-  },
-  {
-    name: "bun",
-    packageName: "bun",
-    cli: {
-      displayName: "bun",
-      description: "Bun",
-      hint: "",
-      color: kleur.yellow,
-    },
-    commands: {
-      install: ["install"],
-      add: (dev) => (dev ? ["add", "-D"] : ["add"]),
-      addPkgs: (pkgs, dev) => (dev ? ["add", "-D", ...pkgs] : ["add", ...pkgs]),
-      createVite: (projectName) => [
-        "x",
-        "create-vite@latest",
-        projectName,
-        "--",
-        "--template",
-        "react-ts",
-      ],
-      runDev: "bun dev",
-    },
-  },
-];
-
-// ---------------- Animations ----------------
-const ANIMATIONS: ReadonlyArray<Readonly<AnimationPackage>> = [
-  NONE,
-  {
-    name: "gsap",
-    packageName: "gsap",
-    importStatement: `import { gsap } from 'gsap'`,
-    cli: {
-      displayName: "GSAP",
-      description: "GreenSock Animation Platform",
-      hint: "",
-      color: kleur.green,
-    },
-  },
-  {
-    name: "motion",
-    packageName: "motion",
-    importStatement: `import { motion } from 'motion/react'`,
-    cli: {
-      displayName: "motion (framer-motion)",
-      description:
-        "A production-grade animation library for React, JavaScript, and Vue.",
-      hint: "",
-      color: kleur.blue,
-    },
-  },
-  {
-    name: "react-spring",
-    packageName: "@react-spring/web",
-    importStatement: `import { useSpring, animated } from '@react-spring/web'`,
-    cli: {
-      displayName: "react-spring",
-      description: "Open-source spring-physics first animation library",
-      hint: "",
-      color: kleur.magenta,
-    },
-  },
-];
-
-// ---------------- State Management ----------------
-const STATE_MANAGEMENTS: ReadonlyArray<Readonly<StateManagementPackage>> = [
-  NONE,
-  {
-    name: "zustand",
-    packageName: "zustand",
-    importStatement: `import { create } from 'zustand'`,
-    cli: {
-      displayName: "Zustand",
-      description: "zustand",
-      hint: "",
-      color: kleur.green,
-    },
-  },
-  {
-    name: "jotai",
-    packageName: "jotai",
-    importStatement: `import { atom } from 'jotai'`,
-    cli: {
-      displayName: "Jotai",
-      description: "jotai",
-      hint: "",
-      color: kleur.cyan,
-    },
-  },
-  {
-    name: "valtio",
-    packageName: "valtio",
-    importStatement: `import { useSnapshot } from 'valtio'`,
-    cli: {
-      displayName: "Valtio",
-      description: "valtio",
-      hint: "",
-      color: kleur.yellow,
-    },
-  },
-  {
-    name: "redux",
-    packageName: "redux",
-    importStatement: `import { useSelector } from 'react-redux'`,
-    cli: {
-      displayName: "Redux",
-      description: "redux",
-      hint: "",
-      color: kleur.red,
-    },
-  },
-];
-
-// ---------------- Three.js / R3F ----------------
-const THREES: ReadonlyArray<Readonly<ThreePackage>> = [
-  NONE,
-  {
-    name: "three",
-    packageName: "three",
-    importStatement: `import * as THREE from 'three'`,
-    cli: {
-      displayName: "Vanilla three.js",
-      description: "Plain three.js",
-      hint: "",
-      color: kleur.magenta,
-    },
-  },
-  {
-    name: "react-three-fiber",
-    packageName: "@react-three/fiber",
-    importStatement: `import { Canvas } from '@react-three/fiber'`,
-    cli: {
-      displayName: "react-three-fiber",
-      description: "React Three Fiber",
-      hint: "",
-      color: kleur.blue,
-    },
-  },
-];
-
-// ---------------- R3F Helpers ----------------
-const REACT_THREES: ReadonlyArray<Readonly<ReactThreePackage>> = [
-  {
-    name: "drei",
-    packageName: "@react-three/drei",
-    importStatement: `import { OrbitControls, Environment, useGLTF, useScroll, useTransform, useFrame, useThree } from '@react-three/drei'`,
-    cli: {
-      displayName: "drei",
-      description: "R3F utilities",
-      hint: "",
-      color: kleur.cyan,
-    },
-  },
-  {
-    name: "react-three-postprocessing",
-    packageName: "@react-three/postprocessing",
-    importStatement: `import { EffectComposer, Bloom, ChromaticAberration, DotScreen, SMAA, SSAO, Vignette } from '@react-three/postprocessing'`,
-    cli: {
-      displayName: "react-three-postprocessing",
-      description: "Postprocessing effects for R3F",
-      hint: "",
-      color: kleur.yellow,
-    },
-  },
-  {
-    name: "leva",
-    packageName: "leva",
-    importStatement: `import { useControls } from 'leva'`,
-    cli: {
-      displayName: "leva",
-      description: "GUI controls for React",
-      hint: "",
-      color: kleur.red,
-    },
-  },
-];
-
-// ---------------- Creative ----------------
-const CREATIVE: ReadonlyArray<Readonly<CreativePackage>> = [
-  {
-    name: "lenis",
-    packageName: "lenis",
-    importStatement: `import { useLenis } from 'lenis'`,
-    cli: {
-      displayName: "lenis",
-      description: "Smooth scroll library",
-      hint: "",
-      color: kleur.magenta,
-    },
-  },
-  {
-    name: "@use-gesture/react",
-    packageName: "@use-gesture/react",
-    importStatement: `import { useGesture } from '@use-gesture/react'`,
-    cli: {
-      displayName: "@use-gesture/react",
-      description: "The only gesture lib you'll need",
-      hint: "",
-      color: kleur.green,
-    },
-  },
-];
 const DEFAULTS: WizardState = {
   packageManager: detectDefaultPM(),
-  useTailwind: true,
-  animation: NONE,
-  stateManagement: NONE,
-  three: NONE,
-  reactThree: [],
-  creative: [],
+  scaffold: {
+    animation: NONE,
+    stateManagement: NONE,
+    three: NONE,
+    reactThree: [],
+    creative: [],
+  },
   projectName: "",
 };
-
-function detectDefaultPM(): PackageManagerPackage {
-  const userAgent = process.env.npm_config_user_agent || "";
-  const pm =
-    PACKAGE_MANAGERS.find((pm) => userAgent.startsWith(pm.name)) ||
-    PACKAGE_MANAGERS.find((pm) => pm.name === "npm");
-  if (!pm) throw new Error("No package manager found");
-  return pm;
-}
-
-async function isCommandAvailable(cmd: string): Promise<boolean> {
-  try {
-    await execa(cmd, ["--version"], { stdio: "ignore" });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function parseFlags(argv: string[]): Partial<WizardState> {
-  const args = yargsParser(argv, {
-    string: ["name"],
-    configuration: { "camel-case-expansion": true },
-  }) as { name?: string };
-  return args.name
-    ? {
-        projectName: args.name,
-      }
-    : {};
-}
 
 async function createViteProject(
   projectRoot: string,
   pm: PackageManagerPackage
 ) {
   try {
-    const { stdout, stderr } = await execa(
-      pm.name,
-      pm.commands.createVite(path.basename(projectRoot)),
-      {
-        stdio: "pipe",
-      }
-    );
-    // optionally store logs somewhere
-    // console.log(stdout); // don’t log unless you want to
+    await execa(pm.name, pm.commands.createVite(path.basename(projectRoot)), {
+      stdio: "pipe",
+    });
   } catch (err: any) {
     console.error(err.stderr || err.message);
     throw err;
   }
 }
-async function addDeps(
-  projectRoot: string,
-  pm: PackageManagerPackage,
-  deps: string[] = [],
-  devDeps: string[] = []
-): Promise<void> {
-  if (deps.length) {
-    await execa(pm.name, pm.commands.addPkgs(deps, false), {
-      cwd: projectRoot,
-      stdio: "inherit",
-    });
-  }
-  if (devDeps.length) {
-    await execa(pm.name, pm.commands.addPkgs(devDeps, true), {
-      cwd: projectRoot,
-      stdio: "inherit",
-    });
-  }
-}
 
 async function promptState(initial: WizardState): Promise<WizardState> {
-  const selectHint = "Return ↵ to confirm";
-  const multiselectHint = "Space to select, Return ↵ to confirm";
-
   p.intro(kleur.cyan("Create your project ⚡"));
 
-  // Project name
-  const projectName =
-    initial.projectName ||
-    (await p.text({
-      message: "Project name:",
-      placeholder: "my-app",
-      validate: (v) => {
-        if (v.trim().length === 0) return "Please enter a project name";
-        const targetDir = path.resolve(process.cwd(), v.trim());
-        if (fs.existsSync(targetDir)) {
-          return `A directory named "${v}" already exists here. Please choose another name.`;
-        }
-        return undefined;
-      },
-    }));
-
-  if (p.isCancel(projectName)) process.exit();
-
-  // Package manager
-  const packageManager = await p.select({
-    message: "Select a package manager:",
-    initialValue: initial.packageManager,
-    options: PACKAGE_MANAGERS.map((pm) => ({
-      label: pm.cli.color(pm.cli.displayName),
-      value: pm,
-      hint: pm.cli.description,
-    })),
-  });
-
-  if (p.isCancel(packageManager)) process.exit();
-
-  // Animation library
-  const animation = await p.select({
-    message: "Choose an animation library:",
-    initialValue: initial.animation,
-    options: ANIMATIONS.map((a) => ({
-      label: a.cli.color(a.cli.displayName),
-      value: a,
-      hint: a.cli.description,
-    })),
-  });
-
-  if (p.isCancel(animation)) process.exit();
-
-  // State management
-  const stateManagement = await p.select({
-    message: "Choose a state management library:",
-    initialValue: initial.stateManagement,
-    options: STATE_MANAGEMENTS.map((s) => ({
-      label: s.cli.color(s.cli.displayName),
-      value: s,
-      hint: s.cli.description,
-    })),
-  });
-
-  if (p.isCancel(stateManagement)) process.exit();
-
-  // Three.js / R3F
-  const three = await p.select({
-    message: "Add 3D graphics library?",
-    initialValue: initial.three,
-    options: THREES.map((t) => ({
-      label: t.cli.color(t.cli.displayName),
-      value: t,
-      hint: t.cli.description,
-    })),
-  });
-
-  if (p.isCancel(three)) process.exit();
-
-  // Extra helpers if react-three-fiber
-  const reactThree = await (async () => {
-    if (three.name === "react-three-fiber") {
-      const rt = await p.multiselect({
-        message: "Add React Three helpers?",
-        initialValues: initial.reactThree?.map((r) => r) ?? [],
-        options: REACT_THREES.map((r) => ({
-          label: r.cli.color(r.cli.displayName),
-          value: r,
-          hint: r.cli.description,
-        })),
-        required: false,
-      });
-      if (p.isCancel(rt)) process.exit();
-      return rt;
-    }
-    return [];
-  })();
-
-  // Creative coding extras
-  const creative = await p.multiselect({
-    message: "Add creative coding helpers?",
-    initialValues: initial.creative?.map((c) => c) ?? [],
-    options: CREATIVE.map((c) => ({
-      label: c.cli.color(c.cli.displayName),
-      value: c,
-      hint: c.cli.description,
-    })),
-    required: false,
-  });
-
-  if (p.isCancel(creative)) process.exit();
-
-  p.outro(kleur.green("✔ Project setup complete!"));
-
-  return {
-    ...initial,
+  const {
     projectName,
     packageManager,
     animation,
@@ -541,68 +74,167 @@ async function promptState(initial: WizardState): Promise<WizardState> {
     three,
     reactThree,
     creative,
+  } = await p.group(
+    {
+      projectName: async () =>
+        initial.projectName ||
+        p.text({
+          message: "Project name:",
+          placeholder: "my-app",
+          validate: (v) => {
+            if (v.trim().length === 0) return "Please enter a project name";
+            const targetDir = path.resolve(process.cwd(), v.trim());
+            if (fs.existsSync(targetDir)) {
+              return `A directory named "${v}" already exists here. Please choose another name.`;
+            }
+            return undefined;
+          },
+        }),
+
+      packageManager: () =>
+        p.select({
+          message: "Select a package manager:",
+          initialValue: initial.packageManager,
+          options: OPTIONS.PACKAGE_MANAGERS.map((pm) => ({
+            label: pm.cli.color(pm.cli.displayName),
+            value: pm,
+            hint: pm.cli.description,
+          })),
+        }),
+
+      animation: () =>
+        p.select({
+          message: "Choose an animation library:",
+          initialValue: initial.scaffold.animation,
+          options: OPTIONS.ANIMATIONS.map((a) => ({
+            label: a.cli.color(a.cli.displayName),
+            value: a,
+            hint: a.cli.description,
+          })),
+        }),
+
+      stateManagement: () =>
+        p.select({
+          message: "Choose a state management library:",
+          initialValue: initial.scaffold.stateManagement,
+          options: OPTIONS.STATE_MANAGEMENTS.map((s) => ({
+            label: s.cli.color(s.cli.displayName),
+            value: s,
+            hint: s.cli.description,
+          })),
+        }),
+
+      three: () =>
+        p.select({
+          message: "Add 3D graphics library?",
+          initialValue: initial.scaffold.three,
+          options: OPTIONS.THREES.map((t) => ({
+            label: t.cli.color(t.cli.displayName),
+            value: t,
+            hint: t.cli.description,
+          })),
+        }),
+
+      reactThree: async ({ results }) => {
+        if (results.three?.name == "react-three-fiber") {
+          return p.multiselect({
+            message: "Add React Three helpers?",
+            initialValues: initial.scaffold.reactThree?.map((r) => r) ?? [],
+            options: OPTIONS.REACT_THREES.map((r) => ({
+              label: r.cli.color(r.cli.displayName),
+              value: r,
+              hint: r.cli.description,
+            })),
+            required: false,
+          });
+        }
+        return [];
+      },
+
+      creative: () =>
+        p.multiselect({
+          message: "Add creative coding helpers?",
+          initialValues: initial.scaffold.creative?.map((c) => c) ?? [],
+          options: OPTIONS.CREATIVE.map((c) => ({
+            label: c.cli.color(c.cli.displayName),
+            value: c,
+            hint: c.cli.description,
+          })),
+          required: false,
+        }),
+    },
+    {
+      onCancel: () => {
+        p.cancel("Operation cancelled.");
+        process.exit(0);
+      },
+    }
+  );
+
+  p.outro(kleur.green("✔ Project setup complete!"));
+
+  return {
+    ...initial,
+    projectName,
+    packageManager,
+    scaffold: {
+      animation,
+      stateManagement,
+      three,
+      reactThree: reactThree as PackageOption[],
+      creative,
+    },
   };
 }
 
-const summarize = (state: WizardState): string =>
-  [
+const summarize = (state: WizardState): string => {
+  const graphics = [
+    state.scaffold.three?.cli.displayName,
+    ...(state.scaffold.reactThree?.map((r) => r.cli.displayName) ?? []),
+  ].filter(Boolean);
+
+  const graphicsLine =
+    graphics.length > 0
+      ? `${kleur.bold().cyan("3D/Graphics")}: ${graphics.join(", ")}`
+      : "";
+
+  return [
     `${kleur.bold().cyan("Project Name")}: ${state.projectName}`,
     `${kleur.bold().cyan("Package Manager")}: ${
       state.packageManager.cli.displayName
     }`,
-    `${kleur.bold().cyan("Tailwind")}: ${state.useTailwind ? "Yes" : "No"}`,
+    `${kleur
+      .bold()
+      .cyan("Automatically Included")}: ${"Tailwind, Path Aliasing"}`,
     `${kleur.bold().cyan("Animation Libraries")}: ${
-      state.animation.cli.displayName
+      state.scaffold.animation.cli.displayName
     }`,
     `${kleur.bold().cyan("State Management")}: ${
-      state.stateManagement.cli.displayName
+      state.scaffold.stateManagement.cli.displayName
     }`,
-    `${kleur.bold().cyan("3D/Graphics")}: ${state.three.cli.displayName} ${
-      state.reactThree.length
-        ? state.reactThree.map((r) => r.cli.displayName).join(", ")
-        : "None"
-    }`,
+    graphicsLine,
     `${kleur.bold().cyan("Creative tools")}: ${
-      state.creative.length
-        ? state.creative.map((c) => c.cli.displayName).join(", ")
+      state.scaffold.creative.length
+        ? state.scaffold.creative.map((c) => c.cli.displayName).join(", ")
         : "None"
     }`,
   ].join("\n");
+};
 
-// https://tailwindcss.com/docs/installation/using-vite
-async function setupTailwind(
-  projectRoot: string,
-  state: WizardState
-): Promise<void> {
-  const deps = ["tailwindcss", "@tailwindcss/vite"];
-  await addDeps(projectRoot, state.packageManager, deps, []);
-
+async function setupTailwind(projectRoot: string): Promise<void> {
   const viteConfigPath = path.join(projectRoot, "vite.config.ts");
-  let viteConfig = "";
+  let viteConfig = await fs.readFile(viteConfigPath, "utf8");
 
-  try {
-    viteConfig = await fs.readFile(viteConfigPath, "utf8");
-  } catch {
-    // fallback if vite.config.ts doesn’t exist
-    viteConfig = `import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-
-export default defineConfig({
-  plugins: [react()],
-})
-`;
-  }
-
-  // Ensure `import tailwindcss`
   if (!viteConfig.includes("tailwindcss")) {
-    viteConfig = `import tailwindcss from '@tailwindcss/vite'\n` + viteConfig;
+    viteConfig =
+      `import tailwindcss from '@tailwindcss/vite'
+` + viteConfig;
   }
 
-  // Insert tailwindcss() into plugins if not already present
   viteConfig = viteConfig.replace(
     /plugins:\s*\[([^\]]*)\]/s,
     (match, plugins) => {
-      if (plugins.includes("tailwindcss()")) return match; // already there
+      if (plugins.includes("tailwindcss()")) return match;
       return `plugins: [${plugins.trim()}${
         plugins.trim() ? ", " : ""
       }tailwindcss()]`;
@@ -611,271 +243,327 @@ export default defineConfig({
 
   await fs.writeFile(viteConfigPath, viteConfig, "utf8");
 
-  // tailwind.config.ts
-  const tailwindConfig = `/** @type {import('tailwindcss').Config} */
-export default {
-  content: [
-    "./index.html",
-    "./src/**/*.{js,ts,jsx,tsx}",
-  ],
-  theme: {
-    extend: {},
-  },
-  plugins: [],
+  const scaffoldCssPath = path.join(SCAFFOLD_ROOT, "index.css");
+  const indexCssPath = path.join(projectRoot, "src", "index.css");
+  await fs.copyFile(scaffoldCssPath, indexCssPath);
 }
-`;
-  await fs.writeFile(
-    path.join(projectRoot, "tailwind.config.ts"),
-    tailwindConfig,
-    "utf8"
+
+async function setupPathAlias(projectRoot: string) {
+  // add tsconfigPaths to vite.config.ts
+  const viteConfigPath = path.join(projectRoot, "vite.config.ts");
+  let viteConfig = "";
+
+  try {
+    viteConfig = await fs.readFile(viteConfigPath, "utf8");
+  } catch {
+    throw new Error("vite.config.ts not found");
+  }
+
+  if (!viteConfig.includes("tsconfigPaths")) {
+    viteConfig =
+      `import tsconfigPaths from "vite-tsconfig-paths";
+` + viteConfig;
+  }
+
+  viteConfig = viteConfig.replace(
+    /plugins:\s*\[([^\]]*)\]/s,
+    (match, plugins) => {
+      if (plugins.includes("tsconfigPaths()")) return match;
+      return `plugins: [${plugins.trim()}${
+        plugins.trim() ? ", " : ""
+      }tsconfigPaths()]`;
+    }
   );
 
-  // index.css
-  const indexCssPath = path.join(projectRoot, "src", "index.css");
-  const css = `@import "tailwindcss";
+  await fs.writeFile(viteConfigPath, viteConfig, "utf8");
 
-:root {
-  color-scheme: light dark;
-}
-
-body {
-  @apply min-h-dvh bg-white text-gray-900 dark:bg-neutral-900 dark:text-neutral-100 antialiased;
-}
-
-#root {
-  @apply min-h-dvh;
-}
-`;
-  await fs.writeFile(indexCssPath, css, "utf8");
-}
-
-// function renderAppTsx(state: WizardState): string {
-//   const imports = new Set<string>([
-//     "import React, { useEffect, useMemo, useRef, useState } from 'react'",
-//   ]);
-
-//   // Animation imports
-//   if (state.animation) {
-//     imports.add(state.animation.importStatement);
-//   }
-//   // StateManagement imports
-//   if (state.stateManagement) {
-//     imports.add(state.stateManagement.importStatement);
-//   }
-
-//   if (state.three) {
-//     imports.add(state.three.importStatement);
-//   }
-
-//   // React Three imports
-//   if (state.reactThree) {
-//     state.reactThree.forEach((pkg) => {
-//       imports.add(pkg.importStatement);
-//     });
-//   }
-
-//   if (state.creative) {
-//     state.creative.forEach((pkg) => {
-//       imports.add(pkg.importStatement);
-//     });
-//   }
-
-//   const lines: string[] = [];
-//   lines.push([...imports].join("\n"));
-//   lines.push("\n");
-
-//   // StateManagement setup blocks
-//   if (state.stateManagement === "zustand") {
-//     lines.push(`type CounterState = { count: number; inc: () => void }`);
-//     lines.push(
-//       `const useCounterStore = create<CounterState>((set) => ({ count: 0, inc: () => set((s) => ({ count: s.count + 1 })) }))`
-//     );
-//   }
-//   if (state.stateManagement === "jotai") {
-//     lines.push(`const countAtom = atom(0)`);
-//   }
-//   if (state.stateManagement === "valtio") {
-//     lines.push(`const stateProxy = proxy({ count: 0 })`);
-//   }
-//   if (state.stateManagement === "redux") {
-//     lines.push(
-//       `const slice = createSlice({ name: 'counter', initialState: { value: 0 }, reducers: { inc: (s) => { s.value += 1 } } })`
-//     );
-//     lines.push(
-//       `const store = configureStore({ reducer: { counter: slice.reducer } })`
-//     );
-//   }
-
-//   // Helper components for R3F
-//   if (state.three === "r3f") {
-//     lines.push(
-//       `function SpinningBox({ color = '#4f46e5' }: { color?: string }) {`
-//     );
-//     lines.push(`  const ref = useRef<THREE.Mesh>(null!)`);
-//     lines.push(
-//       `  useFrame((_, delta) => { if (ref.current) ref.current.rotation.y += delta })`
-//     );
-//     lines.push(
-//       `  return (\n    <mesh ref={ref}>\n      <boxGeometry args={[1,1,1]} />\n      <meshStandardMaterial color={color} />\n    </mesh>\n  )`
-//     );
-//     lines.push(`}`);
-//   }
-
-//   // Main component start
-//   lines.push(`export default function App() {`);
-
-//   if (state.creative?.includes("leva")) {
-//     lines.push(
-//       `  const { color, speed } = useControls({ color: '#4f46e5', speed: { value: 1, min: 0, max: 4, step: 0.1 } })`
-//     );
-//   }
-
-//   if (state.animation === "gsap") {
-//     lines.push(`  const titleRef = useRef<HTMLHeadingElement>(null)`);
-//     lines.push(
-//       `  useEffect(() => { if (titleRef.current) gsap.fromTo(titleRef.current, { y: -16, opacity: 0 }, { y: 0, opacity: 1, duration: 0.8, ease: 'power3.out' }) }, [])`
-//     );
-//   }
-
-//   if (state.animation === "react-spring") {
-//     lines.push(
-//       `  const styles = useSpring({ from: { opacity: 0, y: -16 }, to: { opacity: 1, y: 0 }, config: { tension: 200, friction: 18 } })`
-//     );
-//   }
-
-//   if (state.stateManagement === "zustand") {
-//     lines.push(`  const count = useCounterStore((s) => s.count)`);
-//     lines.push(`  const inc = useCounterStore((s) => s.inc)`);
-//   }
-//   if (state.stateManagement === "jotai") {
-//     lines.push(`  const [count, setCount] = useAtom(countAtom)`);
-//   }
-//   if (state.stateManagement === "valtio") {
-//     lines.push(`  const snap = useSnapshot(stateProxy)`);
-//   }
-//   if (state.stateManagement === "redux") {
-//     lines.push(`  const dispatch = useDispatch()`);
-//     lines.push(`  const count = useSelector((s: any) => s.counter.value)`);
-//   }
-
-//   if (state.creative?.includes("lenis")) {
-//     lines.push(
-//       `  useEffect(() => { const lenis = new Lenis({ smoothWheel: true }); const raf = (t:number)=>{ lenis.raf(t); requestAnimationFrame(raf) }; requestAnimationFrame(raf); return () => { /* lenis has no destroy */ } }, [])`
-//     );
-//   }
-
-//   if (state.creative?.includes("gesture")) {
-//     lines.push(`  const [dragX, setDragX] = useState(0)`);
-//     lines.push(
-//       `  const bind = useDrag(({ offset: [x] }) => setDragX(x), { axis: 'x' })`
-//     );
-//   }
-
-//   const titleEl = (() => {
-//     const text = "create-creative-app";
-//     if (state.animation === "motion")
-//       return `<motion.h1 className=\"text-3xl font-bold\" initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>${text}</motion.h1>`;
-//     if (state.animation === "gsap")
-//       return `<h1 ref={titleRef} className=\"text-3xl font-bold\">${text}</h1>`;
-//     if (state.animation === "react-spring")
-//       return `<animated.h1 style={styles as any} className=\"text-3xl font-bold\">${text}</animated.h1>`;
-//     return `<h1 className=\"text-3xl font-bold\">${text}</h1>`;
-//   })();
-
-//   const counterEl = (() => {
-//     if (state.stateManagement === "zustand")
-//       return `<button className=\"mt-4 px-3 py-2 rounded bg-indigo-600 text-white\" onClick={inc}>Count: {count}</button>`;
-//     if (state.stateManagement === "jotai")
-//       return `<button className=\"mt-4 px-3 py-2 rounded bg-indigo-600 text-white\" onClick={() => setCount((c)=>c+1)}>Count: {count}</button>`;
-//     if (state.stateManagement === "valtio")
-//       return `<button className=\"mt-4 px-3 py-2 rounded bg-indigo-600 text-white\" onClick={() => stateProxy.count++}>Count: {snap.count}</button>`;
-//     if (state.stateManagement === "redux")
-//       return `<button className=\"mt-4 px-3 py-2 rounded bg-indigo-600 text-white\" onClick={() => dispatch(slice.actions.inc())}>Count: {count}</button>`;
-//     return "";
-//   })();
-
-//   lines.push("  return (");
-//   if (state.stateManagement === "redux") {
-//     lines.push("    <Provider store={store}>");
-//   }
-//   lines.push(
-//     `    <div className=\"flex min-h-dvh flex-col items-center justify-center gap-6 p-8\">`
-//   );
-//   lines.push(`      ${titleEl}`);
-//   lines.push(
-//     `      <p className=\"text-sm opacity-70\">Vite + React${
-//       state.useTailwind ? " + TailwindCSS" : ""
-//     }${state.three !== "none" ? " + 3D" : ""}</p>`
-//   );
-//   if (state.creative?.includes("gesture")) {
-//     lines.push(
-//       `      <div {...bind()} className=\"select-none rounded border p-4\">Drag me → {Math.round(dragX)}</div>`
-//     );
-//   }
-//   if (counterEl) lines.push(`      ${counterEl}`);
-
-//   if (state.three === "r3f") {
-//     const colorExpr = state.creative?.includes("leva")
-//       ? "{color}"
-//       : `'#4f46e5'`;
-//     lines.push(
-//       `      <div className=\"h-[300px] w-full max-w-3xl rounded border\">`
-//     );
-//     lines.push(`        <Canvas camera={{ position: [2.5, 2.5, 2.5] }}>`);
-//     lines.push(`          <ambientLight intensity={0.5} />`);
-//     lines.push(`          <directionalLight position={[3,3,3]} />`);
-//     lines.push(`          <SpinningBox color=${colorExpr} />`);
-//     lines.push(`          <OrbitControls enableDamping />`);
-//     lines.push(`        </Canvas>`);
-//     lines.push(`      </div>`);
-//   }
-
-//   lines.push("    </div>");
-//   if (state.stateManagement === "redux") lines.push("    </Provider>");
-//   lines.push("  )");
-//   lines.push("}");
-
-//   return lines.join("\n");
-// }
-
-// async function writeAppTsx(
-//   projectRoot: string,
-//   state: WizardState
-// ): Promise<void> {
-//   const appPath = path.join(projectRoot, "src", "App.tsx");
-//   const content = renderAppTsx(state);
-//   await fs.writeFile(appPath, content, "utf8");
-// }
-
-function computeDeps(state: WizardState): {
-  deps: string[];
-  devDeps: string[];
-} {
-  const deps: string[] = [];
-  const devDeps: string[] = [];
-  // Animations
-
-  return { deps, devDeps };
-}
-
-async function ensurePmAvailable(
-  pm: PackageManagerPackage
-): Promise<PackageManagerPackage> {
-  const available = await isCommandAvailable(pm.name);
-  if (!available) {
-    console.log(
-      kleur.yellow(`⚠ ${pm.name} is not installed. Falling back to npm.`)
-    );
-    const npm = PACKAGE_MANAGERS.find((pm) => pm.name === "npm");
-    if (!npm) throw new Error("npm not found");
-    return npm;
+  // add path alias to tsconfig.app.json
+  const tsconfigPath = path.join(projectRoot, "tsconfig.app.json");
+  let tsconfigRaw = "";
+  try {
+    tsconfigRaw = await fs.readFile(tsconfigPath, "utf8");
+  } catch {
+    throw new Error("tsconfig.app.json not found");
   }
-  return pm;
+
+  const tsconfig = parse(tsconfigRaw);
+  tsconfig.compilerOptions ??= {};
+  tsconfig.compilerOptions.paths ??= {};
+  tsconfig.compilerOptions.paths["@/*"] = ["./src/*"];
+
+  await fs.writeFile(tsconfigPath, JSON.stringify(tsconfig, null, 2), "utf8");
+}
+
+async function setupSvgPlugin(projectRoot: string) {
+  // add svgr to vite.config.ts
+  const viteConfigPath = path.join(projectRoot, "vite.config.ts");
+  let viteConfig = "";
+
+  try {
+    viteConfig = await fs.readFile(viteConfigPath, "utf8");
+  } catch {
+    throw new Error("vite.config.ts not found");
+  }
+
+  if (!viteConfig.includes("vite-plugin-svgr")) {
+    viteConfig =
+      `import svgr from "vite-plugin-svgr";
+` + viteConfig;
+  }
+
+  viteConfig = viteConfig.replace(
+    /plugins:\s*\[([^\]]*)\]/s,
+    (match, plugins) => {
+      if (plugins.includes("svgr()")) return match;
+      return `plugins: [${plugins.trim()}${plugins.trim() ? ", " : ""}svgr()]`;
+    }
+  );
+
+  await fs.writeFile(viteConfigPath, viteConfig, "utf8");
+
+  const viteEnvPath = path.join(projectRoot, "src", "vite-env.d.ts");
+  let viteEnv = "";
+  try {
+    viteEnv = await fs.readFile(viteEnvPath, "utf8");
+  } catch {
+    // ignore
+  }
+
+  const line = '/// <reference types="vite-plugin-svgr/client" />';
+  if (!viteEnv.includes(line)) {
+    viteEnv = viteEnv + "\n" + line;
+  }
+
+  await fs.writeFile(viteEnvPath, viteEnv, "utf8");
+}
+
+async function setupAppTsx(
+  projectRoot: string,
+  state: WizardState
+): Promise<void> {
+  const scaffoldAppPath = path.join(SCAFFOLD_ROOT, "App.tsx");
+  const projectAppPath = path.join(projectRoot, "src", "App.tsx");
+  let content = "";
+
+  // read from scaffold app.tsx
+  content = await fs.readFile(scaffoldAppPath, "utf8");
+  const imports = new Set<string>();
+  const gridComponents: string[] = [];
+  const effectsComponents: string[] = [];
+
+  // add components into App.tsx
+  for (const pkg of flattenObjectValues(state.scaffold)) {
+    if (!pkg.demo) continue;
+    // get all relative file paths in the demo.source directory
+    const paths = await getAllRelativeFilePaths(
+      path.join(SCAFFOLD_ROOT, pkg.demo.source)
+    );
+    // sole file name with .tsx extension (NOT PATH)
+    const tsxFiles = paths.filter((p) => p.endsWith(".tsx"));
+
+    if (tsxFiles.length === 0) {
+      throw new Error(`No tsx components found in ${pkg.demo.source}`);
+    }
+    if (tsxFiles.length > 1) {
+      throw new Error(`Multiple tsx components found in ${pkg.demo.source}`);
+    }
+
+    // get default export name as the component name for import and usage
+    const exportName = extractExportName(
+      await fs.readFile(
+        path.join(SCAFFOLD_ROOT, pkg.demo.source, tsxFiles[0]),
+        "utf8"
+      )
+    );
+    if (!exportName) {
+      throw new Error(
+        `Could not extract export name from ${path.join(
+          pkg.demo.source,
+          tsxFiles[0]
+        )}`
+      );
+    }
+
+    const importComponents = {
+      path: tsxFiles[0].replace(".tsx", ""),
+      componentName: exportName,
+    };
+
+    const importStatement = `import ${importComponents.componentName} from '@/${importComponents.path}';`;
+    imports.add(importStatement);
+    if (pkg.demo.insertion === "GRID") {
+      gridComponents.push(`<${importComponents.componentName} />`);
+    } else if (pkg.demo.insertion === "EFFECTS") {
+      effectsComponents.push(`<${importComponents.componentName} />`);
+    }
+  }
+
+  // === Add missing imports at the top ===
+  const existingImports: string[] = content.match(/import .+ from .+;/g) || [];
+  const newImports = [...imports].filter(
+    (imp) => !existingImports.includes(imp)
+  );
+
+  if (newImports.length > 0) {
+    content = newImports.join("\n") + "\n" + content;
+  }
+
+  // === Insert components into grid ===
+  content = content.replace(
+    /(^[ \t]*)<Grid>([\s\S]*?)<\/Grid>/m,
+    (match, indent, inner) => {
+      const existing = inner.trim();
+
+      // children should be indented one level deeper than <Grid>
+      const childIndent = indent + "  ";
+
+      const updated = [existing, ...gridComponents]
+        .filter(Boolean)
+        .map((c) => childIndent + c)
+        .join("\n");
+
+      return `${indent}<Grid>\n${updated}\n${indent}</Grid>`;
+    }
+  );
+
+  // === Insert components into effects ===
+  content = content.replace(
+    /(^[ \t]*)<Effects>([\s\S]*?)<\/Effects>/m,
+    (match, indent, inner) => {
+      const existing = inner.trim();
+
+      // children should be indented one level deeper than <Effects>
+      const childIndent = indent + "  ";
+
+      const updated = [existing, ...effectsComponents]
+        .filter(Boolean)
+        .map((c) => childIndent + c)
+        .join("\n");
+
+      return `${indent}<Effects>\n${updated}\n${indent}</Effects>`;
+    }
+  );
+  // write to project app.tsx
+  await fs.writeFile(projectAppPath, content, "utf8");
+}
+
+const runSetup = async (
+  projectRoot: string,
+  state: WizardState,
+  noInstall: boolean
+) => {
+  const steps: {
+    startMessage: string;
+    endMessage: string;
+    errorMessage: string;
+    action: () => Promise<void>;
+  }[] = [
+    {
+      startMessage: "Creating Vite + React (TS) project",
+      endMessage: "Vite project created",
+      errorMessage: "Failed to create Vite project",
+      action: () => createViteProject(projectRoot, state.packageManager),
+    },
+    {
+      startMessage: noInstall
+        ? "Adding dependencies"
+        : "Installing selected dependencies",
+      endMessage: noInstall ? "Dependencies added!" : "Dependencies installed!",
+      errorMessage: "Failed to install dependencies",
+      action: () => installDeps(projectRoot, state, noInstall),
+    },
+    {
+      startMessage: "Configuring TailwindCSS",
+      endMessage: "Tailwind configured",
+      errorMessage: "Failed to configure Tailwind",
+      action: () => setupTailwind(projectRoot),
+    },
+    {
+      startMessage: "Configuring path alias and tsconfig",
+      endMessage: "Path alias and tsconfig configured",
+      errorMessage: "Failed to configure path alias and tsconfig",
+      action: () => setupPathAlias(projectRoot),
+    },
+    {
+      startMessage: "Configuring SVG plugin",
+      endMessage: "SVG plugin configured",
+      errorMessage: "Failed to configure SVG plugin",
+      action: () => setupSvgPlugin(projectRoot),
+    },
+    {
+      startMessage: "Scaffolding example files",
+      endMessage: "Example files scaffolded",
+      errorMessage: "Failed to scaffold example files",
+      action: () => scaffoldExampleFiles(projectRoot, state),
+    },
+    {
+      startMessage: "Updating App.tsx",
+      endMessage: "App.tsx updated",
+      errorMessage: "Failed to update App.tsx",
+      action: () => setupAppTsx(projectRoot, state),
+    },
+  ];
+
+  for (const step of steps) {
+    const spinner = p.spinner();
+    spinner.start(step.startMessage);
+
+    try {
+      await step.action();
+      spinner.stop(step.endMessage);
+    } catch (err) {
+      spinner.stop(step.errorMessage);
+      console.error(err);
+      process.exit(1);
+    }
+  }
+};
+
+async function scaffoldExampleFiles(projectRoot: string, state: WizardState) {
+  // copy scaffold demo files
+  for (const pkg of flattenObjectValues(state.scaffold)) {
+    if (!pkg.demo) continue;
+    copyDirSafe(
+      path.join(SCAFFOLD_ROOT, pkg.demo.source),
+      path.join(projectRoot, "src")
+    );
+  }
+}
+
+async function installDeps(
+  projectRoot: string,
+  state: WizardState,
+  noInstall: boolean
+) {
+  const devDeps = [
+    "tailwindcss",
+    "@tailwindcss/vite",
+    "vite-tsconfig-paths",
+    "vite-plugin-svgr",
+  ];
+
+  const deps = flattenObjectValues(state.scaffold)
+    .flatMap((pkg) => pkg.packageName.split(" "))
+    .filter(Boolean);
+
+  const install = async (packages: string[], isDev: boolean) =>
+    packages.length > 0 &&
+    execa(
+      state.packageManager.name,
+      state.packageManager.commands.addPkgs(packages, isDev),
+      {
+        cwd: projectRoot,
+        stdio: "inherit",
+      }
+    );
+  if (noInstall) return;
+  await install(deps, false);
+  await install(devDeps, true);
 }
 
 async function main() {
-  const flags = parseFlags(process.argv.slice(2));
-  const initialState: WizardState = { ...DEFAULTS, ...flags };
+  const { name, noInstall } = parseFlags(process.argv.slice(2));
+  const initialState: WizardState = { ...DEFAULTS, projectName: name };
   const state = await promptState(initialState);
 
   await ensurePmAvailable(state.packageManager);
@@ -888,66 +576,18 @@ async function main() {
 
   p.note(summarize(state), "Summary");
 
-  // --- Creating Vite project
-  const viteTask = p.spinner();
-  viteTask.start("Creating Vite + React (TS) project");
-  try {
-    await createViteProject(projectRoot, state.packageManager);
-    viteTask.stop("Vite project created");
-  } catch (err) {
-    viteTask.stop("Failed to create Vite project");
-    console.error(err);
-    process.exit(1);
-  }
-
-  // --- Adding deps
-  const { deps, devDeps } = computeDeps(state);
-  const depsTask = p.spinner();
-  depsTask.start("Adding selected dependencies");
-  try {
-    await addDeps(projectRoot, state.packageManager, deps, devDeps);
-    depsTask.stop("Dependencies added");
-  } catch (err) {
-    depsTask.stop("Failed to add dependencies");
-    console.error(err);
-    process.exit(1);
-  }
-
-  // --- Tailwind
-  if (state.useTailwind) {
-    const twTask = p.spinner();
-    twTask.start("Configuring TailwindCSS");
-    try {
-      await setupTailwind(projectRoot, state);
-      twTask.stop("Tailwind configured");
-    } catch (err) {
-      twTask.stop("Failed to configure Tailwind");
-      console.error(err);
-      process.exit(1);
-    }
-  }
-
-  // --- Scaffolding example files
-  const filesTask = p.spinner();
-  filesTask.start("Scaffolding example files");
-  try {
-    // await writeAppTsx(projectRoot, state);
-    filesTask.stop("Example files ready");
-  } catch (err) {
-    filesTask.stop("Failed to scaffold files");
-    console.error(err);
-    process.exit(1);
-  }
+  await runSetup(projectRoot, state, noInstall);
 
   p.outro(kleur.bold().green("✔ Project ready!"));
   console.log("\nNext steps:");
   console.log(`  1. cd ${state.projectName}`);
-  console.log("  2.", runDevCmd(state.packageManager));
-  console.log("\nHappy building ✨");
-}
-
-function runDevCmd(pm: PackageManagerPackage): string {
-  return pm.commands.runDev;
+  if (!noInstall) {
+    console.log("  2.", state.packageManager.commands.runDev);
+  } else {
+    console.log("  2. npm install ");
+    console.log("  3.", state.packageManager.commands.runDev);
+  }
+  console.log("\nGet creative and happy building ✨");
 }
 
 main().catch((err) => {

@@ -1,1 +1,17 @@
-node_modules
+# ignore everything
+*
+
+# allow source and development dirs
+!src/
+!src/**
+
+# ignore node_modules inside development
+src/development/node_modules/
+src/development/node_modules/**
+
+# allow some root files
+!package.json
+!package-lock.json
+!tsconfig.json
+!README.md
+!.gitignore
