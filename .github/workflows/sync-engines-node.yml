@@ -33,7 +33,9 @@ jobs:
           echo "Upstream engines.node = $node_versions"
 
           # Use semver to extract lowest versions per range
-          npm install -g semver
+          npm init -y
+          npm install semver
+
           node_versions_test=$(node -e "
           const semver = require('semver');
           const range = process.argv[1];
