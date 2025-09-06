@@ -79,7 +79,7 @@ jobs:
         id: cpr
         uses: peter-evans/create-pull-request@v6
         with:
-          branch: ${{ env.UPDATE_BRANCH }}
+          branch: main
           title: "chore: sync engines.node with create-vite"
           body: |
             This PR updates the `engines.node` field in `package.json`
