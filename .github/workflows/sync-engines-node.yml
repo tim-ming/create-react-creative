@@ -15,6 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pull-requests: write
     outputs:
       pr-url: ${{ steps.cpr.outputs.pull-request-url }}
       pr-number: ${{ steps.cpr.outputs.pull-request-number }}
