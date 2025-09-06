@@ -1,5 +1,5 @@
 import kleur from "kleur";
-import type { PackageManagerPackage, PackageOption } from "./types.js";
+import type { PackageManager, PackageOption } from "./types.js";
 
 const NONE: Readonly<PackageOption> = {
   name: "none",
@@ -13,16 +13,9 @@ const NONE: Readonly<PackageOption> = {
 };
 
 // ---------------- Package Managers ----------------
-const PACKAGE_MANAGERS: ReadonlyArray<Readonly<PackageManagerPackage>> = [
-  {
-    name: "npm",
+const PACKAGE_MANAGERS: Readonly<Record<string, Readonly<PackageManager>>> = {
+  npm: {
     packageName: "npm",
-    cli: {
-      displayName: "npm",
-      description: "Node Package Manager",
-      hint: "",
-      color: kleur.red,
-    },
     commands: {
       install: ["install"],
       add: (dev) => (dev ? ["install", "-D"] : ["install"]),
@@ -39,15 +32,8 @@ const PACKAGE_MANAGERS: ReadonlyArray<Readonly<PackageManagerPackage>> = [
       runDev: "npm run dev",
     },
   },
-  {
-    name: "pnpm",
+  pnpm: {
     packageName: "pnpm",
-    cli: {
-      displayName: "pnpm",
-      description: "PNPM",
-      hint: "",
-      color: kleur.magenta,
-    },
     commands: {
       install: ["install"],
       add: (dev) => (dev ? ["add", "-D"] : ["add"]),
@@ -62,15 +48,8 @@ const PACKAGE_MANAGERS: ReadonlyArray<Readonly<PackageManagerPackage>> = [
       runDev: "pnpm dev",
     },
   },
-  {
-    name: "yarn",
+  yarn: {
     packageName: "yarn",
-    cli: {
-      displayName: "yarn",
-      description: "Yarn",
-      hint: "",
-      color: kleur.cyan,
-    },
     commands: {
       install: ["install"],
       add: (dev) => (dev ? ["add", "-D"] : ["add"]),
@@ -85,15 +64,8 @@ const PACKAGE_MANAGERS: ReadonlyArray<Readonly<PackageManagerPackage>> = [
       runDev: "yarn dev",
     },
   },
-  {
-    name: "bun",
+  bun: {
     packageName: "bun",
-    cli: {
-      displayName: "bun",
-      description: "Bun",
-      hint: "",
-      color: kleur.yellow,
-    },
     commands: {
       install: ["install"],
       add: (dev) => (dev ? ["add", "-D"] : ["add"]),
@@ -109,7 +81,7 @@ const PACKAGE_MANAGERS: ReadonlyArray<Readonly<PackageManagerPackage>> = [
       runDev: "bun dev",
     },
   },
-];
+};
 
 // ---------------- Animations ----------------
 const ANIMATIONS: ReadonlyArray<Readonly<PackageOption>> = [

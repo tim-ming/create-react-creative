@@ -32,7 +32,7 @@ export const toggleTodoAtom = atom(null, (get, set, id: number) => {
   set(
     todosAtom,
     get(todosAtom).map((todo) =>
-      todo.id === id ? { ...todo, completed: !todo.completed } : todo
-    )
+      todo.id === id ? { ...todo, completed: !todo.completed } : todo,
+    ),
   );
 });

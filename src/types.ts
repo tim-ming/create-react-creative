@@ -16,16 +16,15 @@ interface PackageOption {
   };
 }
 
-interface PackageManagerConfig {
-  install: string[];
-  add: (dev: boolean) => string[];
-  addPkgs: (pkgs: string[], dev: boolean) => string[];
-  createVite: (projectName: string) => string[];
-  runDev: string;
+interface PackageManager {
+  packageName: "npm" | "pnpm" | "yarn" | "bun";
+  commands: {
+    install: string[];
+    add: (dev: boolean) => string[];
+    addPkgs: (pkgs: string[], dev: boolean) => string[];
+    createVite: (projectName: string) => string[];
+    runDev: string;
+  };
 }
 
-type PackageManagerPackage = PackageOption & {
-  commands: PackageManagerConfig;
-};
-
-export type { PackageOption, PackageManagerConfig, PackageManagerPackage };
+export type { PackageOption, PackageManager };

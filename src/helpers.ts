@@ -2,16 +2,18 @@ import path from "node:path";
 import fs from "fs-extra";
 import process from "node:process";
 import { execa } from "execa";
-import kleur from "kleur";
 import yargsParser from "yargs-parser";
 import OPTIONS from "./constants.js";
-import type { PackageManagerPackage } from "./types.js";
+import type { PackageManager } from "./types.js";
 import { parse as babelParse } from "@babel/parser";
-import traverse from "@babel/traverse";
+import traverseModule, { NodePath } from "@babel/traverse";
+import * as t from "@babel/types";
+
+const traverse = traverseModule.default ?? traverseModule;
 
 type ElementType<T> = T extends (infer U)[] ? U : T;
 
-export function flattenObjectValues<T extends Record<string, any>>(
+export function flattenObjectValues<T extends Record<string, unknown>>(
   obj: T
 ): ElementType<T[keyof T]>[] {
   return Object.values(obj).flatMap((value) =>
@@ -20,15 +22,15 @@ export function flattenObjectValues<T extends Record<string, any>>(
 }
 
 export function extractExportName(content: string): string {
-  let name: string = "";
+  let name = "";
 
   const ast = babelParse(content, {
     sourceType: "module",
     plugins: ["typescript", "jsx"],
   });
 
-  traverse.default(ast, {
-    ExportDefaultDeclaration(path) {
+  traverse(ast, {
+    ExportDefaultDeclaration(path: NodePath<t.ExportDefaultDeclaration>) {
       const node = path.node.declaration;
       if (
         node.type === "FunctionDeclaration" ||
@@ -75,13 +77,24 @@ export async function copyDirSafe(srcDir: string, destDir: string) {
   }
 }
 
-export function detectDefaultPM(): PackageManagerPackage {
-  const userAgent = process.env.npm_config_user_agent || "";
-  const pm =
-    OPTIONS.PACKAGE_MANAGERS.find((pm) => userAgent.startsWith(pm.name)) ||
-    OPTIONS.PACKAGE_MANAGERS.find((pm) => pm.name === "npm");
-  if (!pm) throw new Error("No package manager found");
-  return pm;
+export function getPackageManager(): Readonly<PackageManager> {
+  const userAgent = process.env.npm_config_user_agent ?? "";
+  const acceptedPackageManagers = Object.keys(OPTIONS.PACKAGE_MANAGERS);
+  const pm = Object.keys(OPTIONS.PACKAGE_MANAGERS).find((key) => {
+    if (userAgent.startsWith(key)) {
+      return key;
+    }
+  });
+
+  if (!pm) {
+    throw new Error(
+      "Package Manager must be one of: " +
+        acceptedPackageManagers.join(", ") +
+        ". You have: " +
+        userAgent
+    );
+  }
+  return OPTIONS.PACKAGE_MANAGERS[pm];
 }
 
 export async function isCommandAvailable(cmd: string): Promise<boolean> {
@@ -108,19 +121,4 @@ export function parseFlags(argv: string[]): {
     name: args.name ?? args._[0] ?? "",
     noInstall: args.noInstall ?? false,
   };
-}
-
-export async function ensurePmAvailable(
-  pm: PackageManagerPackage
-): Promise<PackageManagerPackage> {
-  const available = await isCommandAvailable(pm.name);
-  if (!available) {
-    console.log(
-      kleur.yellow(`⚠ ${pm.name} is not installed. Falling back to npm.`)
-    );
-    const npm = OPTIONS.PACKAGE_MANAGERS.find((pm) => pm.name === "npm");
-    if (!npm) throw new Error("npm not found");
-    return npm;
-  }
-  return pm;
 }

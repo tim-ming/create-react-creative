@@ -10,7 +10,7 @@ export const useZustandStore = create<{
   decrement: () => void;
   addTodo: (title: string) => void;
   toggleTodo: (id: number) => void;
-}>((set, get) => ({
+}>((set, _) => ({
   count: 0,
   todos: [],
   increment: () => set((state) => ({ count: state.count + 1 })),

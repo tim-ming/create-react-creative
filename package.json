@@ -3,9 +3,6 @@
   "version": "0.1.0",
   "description": "Interactive wizard to scaffold a creative Vite + React app",
   "type": "module",
-  "bin": {
-    "create-creative-app": "bin/create-creative-app.mjs"
-  },
   "engines": {
     "node": ">18"
   },
@@ -25,14 +22,24 @@
     "yargs-parser": "^21.1.1"
   },
   "devDependencies": {
+    "@eslint/compat": "^1.3.2",
+    "@eslint/js": "^9.35.0",
     "@types/prompts": "^2.4.9",
     "@types/yargs-parser": "^21.0.3",
-    "typescript": "^5.9.2"
+    "eslint": "^9.35.0",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.20",
+    "globals": "^16.3.0",
+    "typescript": "^5.9.2",
+    "typescript-eslint": "^8.42.0"
   },
   "scripts": {
-    "build": "npx tsc -p tsconfig.json",
-    "watch": "npx tsc -w -p tsconfig.json",
-    "create": "node dist/create-creative-app.js"
+    "build": "ncc build src/create-creative-app.ts -o dist",
+    "create": "node dist/index.js",
+    "format": "prettier --no-error-on-unmatched-pattern --config ./.prettierrc.js --write \"**/*.{ts,yml,yaml}\"",
+    "format-check": "prettier --no-error-on-unmatched-pattern --config ./.prettierrc.js --check \"**/*.{ts,yml,yaml}\"",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --ext .ts --fix"
   },
   "main": "index.js",
   "directories": {

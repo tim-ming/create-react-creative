@@ -17,3 +17,4 @@ src/development/node_modules/**
 !.gitignore
 !.github/
 !.github/**
+!eslint.config.js

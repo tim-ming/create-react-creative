@@ -8,15 +8,14 @@ import * as p from "@clack/prompts";
 import { execa } from "execa";
 import kleur from "kleur";
 import OPTIONS, { NONE } from "./constants.js";
-import type { PackageManagerPackage, PackageOption } from "./types.js";
+import type { PackageManager, PackageOption } from "./types.js";
 import { parse } from "jsonc-parser";
 import {
   copyDirSafe,
-  detectDefaultPM,
-  ensurePmAvailable,
   extractExportName,
   flattenObjectValues,
   getAllRelativeFilePaths,
+  getPackageManager,
   parseFlags,
 } from "./helpers.js";
 const __filename = fileURLToPath(import.meta.url);
@@ -27,7 +26,6 @@ const SCAFFOLD_ROOT = path.resolve(
 );
 interface WizardState {
   projectName: string;
-  packageManager: PackageManagerPackage;
   scaffold: {
     animation: PackageOption;
     stateManagement: PackageOption;
@@ -38,7 +36,6 @@ interface WizardState {
 }
 
 const DEFAULTS: WizardState = {
-  packageManager: detectDefaultPM(),
   scaffold: {
     animation: NONE,
     stateManagement: NONE,
@@ -49,18 +46,14 @@ const DEFAULTS: WizardState = {
   projectName: "",
 };
 
-async function createViteProject(
-  projectRoot: string,
-  pm: PackageManagerPackage
-) {
-  try {
-    await execa(pm.name, pm.commands.createVite(path.basename(projectRoot)), {
+async function createViteProject(projectRoot: string, pm: PackageManager) {
+  await execa(
+    pm.packageName,
+    pm.commands.createVite(path.basename(projectRoot)),
+    {
       stdio: "pipe",
-    });
-  } catch (err: any) {
-    console.error(err.stderr || err.message);
-    throw err;
-  }
+    }
+  );
 }
 
 async function promptState(initial: WizardState): Promise<WizardState> {
@@ -68,7 +61,6 @@ async function promptState(initial: WizardState): Promise<WizardState> {
 
   const {
     projectName,
-    packageManager,
     animation,
     stateManagement,
     three,
@@ -89,17 +81,6 @@ async function promptState(initial: WizardState): Promise<WizardState> {
             }
             return undefined;
           },
-        }),
-
-      packageManager: () =>
-        p.select({
-          message: "Select a package manager:",
-          initialValue: initial.packageManager,
-          options: OPTIONS.PACKAGE_MANAGERS.map((pm) => ({
-            label: pm.cli.color(pm.cli.displayName),
-            value: pm,
-            hint: pm.cli.description,
-          })),
         }),
 
       animation: () =>
@@ -176,7 +157,6 @@ async function promptState(initial: WizardState): Promise<WizardState> {
   return {
     ...initial,
     projectName,
-    packageManager,
     scaffold: {
       animation,
       stateManagement,
@@ -200,9 +180,6 @@ const summarize = (state: WizardState): string => {
 
   return [
     `${kleur.bold().cyan("Project Name")}: ${state.projectName}`,
-    `${kleur.bold().cyan("Package Manager")}: ${
-      state.packageManager.cli.displayName
-    }`,
     `${kleur
       .bold()
       .cyan("Automatically Included")}: ${"Tailwind, Path Aliasing"}`,
@@ -411,7 +388,7 @@ async function setupAppTsx(
   // === Insert components into grid ===
   content = content.replace(
     /(^[ \t]*)<Grid>([\s\S]*?)<\/Grid>/m,
-    (match, indent, inner) => {
+    (_, indent, inner) => {
       const existing = inner.trim();
 
       // children should be indented one level deeper than <Grid>
@@ -429,7 +406,7 @@ async function setupAppTsx(
   // === Insert components into effects ===
   content = content.replace(
     /(^[ \t]*)<Effects>([\s\S]*?)<\/Effects>/m,
-    (match, indent, inner) => {
+    (_, indent, inner) => {
       const existing = inner.trim();
 
       // children should be indented one level deeper than <Effects>
@@ -450,6 +427,7 @@ async function setupAppTsx(
 const runSetup = async (
   projectRoot: string,
   state: WizardState,
+  pm: PackageManager,
   noInstall: boolean
 ) => {
   const steps: {
@@ -462,7 +440,7 @@ const runSetup = async (
       startMessage: "Creating Vite + React (TS) project",
       endMessage: "Vite project created",
       errorMessage: "Failed to create Vite project",
-      action: () => createViteProject(projectRoot, state.packageManager),
+      action: () => createViteProject(projectRoot, pm),
     },
     {
       startMessage: noInstall
@@ -470,7 +448,7 @@ const runSetup = async (
         : "Installing selected dependencies",
       endMessage: noInstall ? "Dependencies added!" : "Dependencies installed!",
       errorMessage: "Failed to install dependencies",
-      action: () => installDeps(projectRoot, state, noInstall),
+      action: () => installDeps(projectRoot, state, pm, noInstall),
     },
     {
       startMessage: "Configuring TailwindCSS",
@@ -533,6 +511,7 @@ async function scaffoldExampleFiles(projectRoot: string, state: WizardState) {
 async function installDeps(
   projectRoot: string,
   state: WizardState,
+  pm: PackageManager,
   noInstall: boolean
 ) {
   const devDeps = [
@@ -548,44 +527,44 @@ async function installDeps(
 
   const install = async (packages: string[], isDev: boolean) =>
     packages.length > 0 &&
-    execa(
-      state.packageManager.name,
-      state.packageManager.commands.addPkgs(packages, isDev),
-      {
-        cwd: projectRoot,
-        stdio: "inherit",
-      }
-    );
+    execa(pm.packageName, pm.commands.addPkgs(packages, isDev), {
+      cwd: projectRoot,
+      stdio: "inherit",
+    });
+
+  // skip installation if noInstall is true
   if (noInstall) return;
+
   await install(deps, false);
   await install(devDeps, true);
 }
 
 async function main() {
   const { name, noInstall } = parseFlags(process.argv.slice(2));
+  const pm = getPackageManager();
+
   const initialState: WizardState = { ...DEFAULTS, projectName: name };
   const state = await promptState(initialState);
 
-  await ensurePmAvailable(state.packageManager);
-
   const projectRoot = path.resolve(process.cwd(), state.projectName);
+
   if (await fs.pathExists(projectRoot)) {
     p.cancel(kleur.red(`✖ Directory already exists: ${projectRoot}`));
     process.exit(1);
   }
 
-  p.note(summarize(state), "Summary");
+  p.note(summarize(state), "Configuration Summary");
 
-  await runSetup(projectRoot, state, noInstall);
+  await runSetup(projectRoot, state, pm, noInstall);
 
   p.outro(kleur.bold().green("✔ Project ready!"));
   console.log("\nNext steps:");
   console.log(`  1. cd ${state.projectName}`);
   if (!noInstall) {
-    console.log("  2.", state.packageManager.commands.runDev);
+    console.log("  2.", pm.commands.runDev);
   } else {
-    console.log("  2. npm install ");
-    console.log("  3.", state.packageManager.commands.runDev);
+    console.log("  2.", pm.commands.install);
+    console.log("  3.", pm.commands.runDev);
   }
   console.log("\nGet creative and happy building ✨");
 }
