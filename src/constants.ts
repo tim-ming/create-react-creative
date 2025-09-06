@@ -116,7 +116,7 @@ const ANIMATIONS: ReadonlyArray<Readonly<PackageOption>> = [
   NONE,
   {
     name: "gsap",
-    packageName: "gsap",
+    packageName: "gsap @gsap/react",
     cli: {
       displayName: "GSAP",
       description: "GreenSock Animation Platform",
