@@ -18,3 +18,4 @@ src/development/node_modules/**
 !.github/
 !.github/**
 !eslint.config.js
+!prettier.config.js

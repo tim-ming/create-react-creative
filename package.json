@@ -27,19 +27,23 @@
     "@types/prompts": "^2.4.9",
     "@types/yargs-parser": "^21.0.3",
     "eslint": "^9.35.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^16.3.0",
+    "prettier": "^3.6.2",
     "typescript": "^5.9.2",
     "typescript-eslint": "^8.42.0"
   },
   "scripts": {
     "build": "ncc build src/create-creative-app.ts -o dist",
     "create": "node dist/index.js",
-    "format": "prettier --no-error-on-unmatched-pattern --config ./.prettierrc.js --write \"**/*.{ts,yml,yaml}\"",
-    "format-check": "prettier --no-error-on-unmatched-pattern --config ./.prettierrc.js --check \"**/*.{ts,yml,yaml}\"",
+    "format": "prettier --write .",
+    "format-check": "prettier --check .",
     "lint": "eslint .",
-    "lint:fix": "eslint . --ext .ts --fix"
+    "lint:fix": "eslint . --ext .ts --fix",
+    "prepare": "husky"
   },
   "main": "index.js",
   "directories": {
