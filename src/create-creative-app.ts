@@ -135,7 +135,7 @@ async function promptState(initial: WizardState): Promise<WizardState> {
         p.cancel('Operation cancelled.');
         process.exit(0);
       },
-    },
+    }
   );
 
   p.outro(kleur.green('✔ Project setup complete!'));
@@ -304,7 +304,7 @@ async function setupAppTsx(projectRoot: string, state: WizardState): Promise<voi
 
     // get default export name as the component name for import and usage
     const exportName = extractExportName(
-      await fs.readFile(path.join(SCAFFOLD_ROOT, pkg.demo.source, tsxFiles[0]), 'utf8'),
+      await fs.readFile(path.join(SCAFFOLD_ROOT, pkg.demo.source, tsxFiles[0]), 'utf8')
     );
     if (!exportName) {
       throw new Error(`Could not extract export name from ${path.join(pkg.demo.source, tsxFiles[0])}`);

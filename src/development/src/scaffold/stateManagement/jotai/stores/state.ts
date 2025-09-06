@@ -26,6 +26,6 @@ export const addTodoAtom = atom(null, (get, set, title: string) => {
 export const toggleTodoAtom = atom(null, (get, set, id: number) => {
   set(
     todosAtom,
-    get(todosAtom).map((todo) => (todo.id === id ? { ...todo, completed: !todo.completed } : todo)),
+    get(todosAtom).map((todo) => (todo.id === id ? { ...todo, completed: !todo.completed } : todo))
   );
 });

@@ -79,7 +79,7 @@ export function getPackageManager(): Readonly<PackageManager> {
 
   if (!pm) {
     throw new Error(
-      'Package Manager must be one of: ' + acceptedPackageManagers.join(', ') + '. You have: ' + userAgent,
+      'Package Manager must be one of: ' + acceptedPackageManagers.join(', ') + '. You have: ' + userAgent
     );
   }
   return OPTIONS.PACKAGE_MANAGERS[pm];
