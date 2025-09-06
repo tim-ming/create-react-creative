@@ -35,10 +35,7 @@ jobs:
           echo "Upstream engines.node = $node_versions"
 
           # Use semver to extract lowest versions per range
-          npm init -y
-          npm install semver
-
-          node_versions_test=$(node -e "
+          node_versions_test=$(npx -p semver node -e "
           const semver = require('semver');
           const range = process.argv[1];
           const parts = range.split('||').map(r => r.trim());
@@ -51,36 +48,32 @@ jobs:
           echo "node_versions_test=$node_versions_test" >> $GITHUB_OUTPUT
 
       - name: Update package.json if needed
+        id: update-file
         run: |
           CURRENT=$(jq -r '.engines.node' package.json)
           NEW="${{ steps.parse.outputs.node_versions }}"
           if [ "$CURRENT" != "$NEW" ]; then
             echo "Updating engines.node from $CURRENT to $NEW"
             jq ".engines.node = \"$NEW\"" package.json > package.json.tmp && mv package.json.tmp package.json
+            # Set an output to indicate a change was made
+            echo "changed=true" >> $GITHUB_OUTPUT
           else
             echo "No update needed."
-            exit 0
-          fi
-
-      - name: Commit changes
-        env:
-          NODE_VERSIONS: ${{ steps.parse.outputs.node_versions }}
-        run: |
-          if ! git diff --quiet; then
-            git config user.name "$ACTOR_NAME"
-            git config user.email "$ACTOR_EMAIL"
-            git checkout -B $UPDATE_BRANCH
-            git add package.json
-            git commit -m "chore: sync engines.node with create-vite ($NODE_VERSIONS)"
-            git push -f origin $UPDATE_BRANCH
+            echo "changed=false" >> $GITHUB_OUTPUT
           fi
 
       - name: Create Pull Request
         id: cpr
+        if: steps.update-file.outputs.changed == 'true'
         uses: peter-evans/create-pull-request@v6
         with:
-          branch: main
+          # The branch to create and push the changes to
+          branch: ${{ env.UPDATE_BRANCH }}
+          # The commit message
+          commit-message: "chore: sync engines.node with create-vite (${{ steps.parse.outputs.node_versions }})"
+          # The PR title
           title: "chore: sync engines.node with create-vite"
+          # The PR body
           body: |
             This PR updates the `engines.node` field in `package.json`
             to match `create-vite`'s latest requirement:

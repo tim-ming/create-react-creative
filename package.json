@@ -5,6 +5,7 @@
   "type": "module",
   "bin": {
     "create-creative-app": "bin/create-creative-app.mjs"
+    "create-creative-app": "bin/create-creative-app.mjs"
   },
   "engines": {
     "node": "^20.19.0 || >=22.12.0"
@@ -35,6 +36,17 @@
     "create": "node dist/create-creative-app.js"
   },
   "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tim-ming/npx.git"
+  },
   "keywords": [],
-  "author": ""
+  "author": "tim-ming",
+  "bugs": {
+    "url": "https://github.com/tim-ming/npx/issues"
+  },
+  "homepage": "https://github.com/tim-ming/npx#readme"
 }
