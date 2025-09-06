@@ -1,8 +1,8 @@
-import ReactLogo from "@/assets/react.svg?react";
-import Lenis from "./scaffold/creative/lenis/Lenis";
-import AnimationDemo from "./scaffold/animation/gsap/AnimationDemo";
-import StateDemo from "./scaffold/stateManagement/zustand/StateDemo";
-import ThreeDemo from "./scaffold/three/r3f/ThreeDemo";
+import ReactLogo from '@/assets/react.svg?react';
+import Lenis from './scaffold/creative/lenis/Lenis';
+import AnimationDemo from './scaffold/animation/gsap/AnimationDemo';
+import StateDemo from './scaffold/stateManagement/zustand/StateDemo';
+import ThreeDemo from './scaffold/three/r3f/ThreeDemo';
 
 function App() {
   return (

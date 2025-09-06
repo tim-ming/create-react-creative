@@ -1,6 +1,6 @@
 // ===== ZUSTAND =====
 // Zustand uses a simple store pattern with hooks
-import { create } from "zustand";
+import { create } from 'zustand';
 
 // Basic store with actions
 export const useZustandStore = create<{
@@ -21,8 +21,6 @@ export const useZustandStore = create<{
     })),
   toggleTodo: (id) =>
     set((state) => ({
-      todos: state.todos.map((todo) =>
-        todo.id === id ? { ...todo, completed: !todo.completed } : todo
-      ),
+      todos: state.todos.map((todo) => (todo.id === id ? { ...todo, completed: !todo.completed } : todo)),
     })),
 }));

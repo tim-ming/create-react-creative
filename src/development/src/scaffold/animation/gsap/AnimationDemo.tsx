@@ -1,14 +1,14 @@
-import { useRef, useEffect } from "react";
-import { gsap } from "gsap";
+import { useRef, useEffect } from 'react';
+import { gsap } from 'gsap';
 
 export default function AnimationDemo() {
   const boxRef = useRef(null);
 
   useEffect(() => {
     gsap.to(boxRef.current, {
-      rotation: "+=360",
+      rotation: '+=360',
       duration: 2,
-      ease: "none",
+      ease: 'none',
       repeat: -1,
     });
   }, []);
@@ -19,10 +19,10 @@ export default function AnimationDemo() {
       <div
         ref={boxRef}
         style={{
-          width: "100px",
-          height: "100px",
-          background: "green",
-          margin: "20px",
+          width: '100px',
+          height: '100px',
+          background: 'green',
+          margin: '20px',
         }}
       ></div>
     </div>

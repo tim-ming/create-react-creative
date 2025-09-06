@@ -1,5 +1,5 @@
-import { useSnapshot } from "valtio";
-import { valtioStore, valtioActions } from "./stores/state";
+import { useSnapshot } from 'valtio';
+import { valtioStore, valtioActions } from './stores/state';
 
 export default function StateDemo() {
   const snap = useSnapshot(valtioStore);
@@ -18,9 +18,9 @@ export default function StateDemo() {
         <input
           type="text"
           onKeyDown={(e) => {
-            if (e.key === "Enter") {
+            if (e.key === 'Enter') {
               valtioActions.addTodo(e.currentTarget.value);
-              e.currentTarget.value = "";
+              e.currentTarget.value = '';
             }
           }}
         />
@@ -30,7 +30,7 @@ export default function StateDemo() {
               key={todo.id}
               onClick={() => valtioActions.toggleTodo(todo.id)}
               style={{
-                textDecoration: todo.completed ? "line-through" : "none",
+                textDecoration: todo.completed ? 'line-through' : 'none',
               }}
             >
               {todo.title}

@@ -1,5 +1,5 @@
-import { useEffect, useRef } from "react";
-import * as THREE from "three";
+import { useEffect, useRef } from 'react';
+import * as THREE from 'three';
 
 export default function ThreeDemo() {
   const mountRef = useRef<HTMLDivElement>(null);
@@ -12,12 +12,7 @@ export default function ThreeDemo() {
     const scene = new THREE.Scene();
 
     // Camera
-    const camera = new THREE.PerspectiveCamera(
-      75,
-      currentMount.clientWidth / currentMount.clientHeight,
-      0.1,
-      1000
-    );
+    const camera = new THREE.PerspectiveCamera(75, currentMount.clientWidth / currentMount.clientHeight, 0.1, 1000);
     camera.position.z = 2;
 
     // Renderer
@@ -27,7 +22,7 @@ export default function ThreeDemo() {
 
     // Cube
     const geometry = new THREE.BoxGeometry();
-    const material = new THREE.MeshStandardMaterial({ color: "magenta" });
+    const material = new THREE.MeshStandardMaterial({ color: 'magenta' });
     const cube = new THREE.Mesh(geometry, material);
     scene.add(cube);
 
@@ -55,7 +50,7 @@ export default function ThreeDemo() {
 
   return (
     <div>
-      <div ref={mountRef} style={{ width: "100%", height: "400px" }} />
+      <div ref={mountRef} style={{ width: '100%', height: '400px' }} />
     </div>
   );
 }

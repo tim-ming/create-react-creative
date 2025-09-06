@@ -1,12 +1,5 @@
-import { useAtom } from "jotai";
-import {
-  countAtom,
-  incrementAtom,
-  decrementAtom,
-  todosAtom,
-  addTodoAtom,
-  toggleTodoAtom,
-} from "./stores/state";
+import { useAtom } from 'jotai';
+import { countAtom, incrementAtom, decrementAtom, todosAtom, addTodoAtom, toggleTodoAtom } from './stores/state';
 
 function Counter() {
   const [count] = useAtom(countAtom);
@@ -29,11 +22,11 @@ function Todos() {
 
   return (
     <div>
-      <button onClick={() => addTodo("New Task")}>Add Todo</button>
+      <button onClick={() => addTodo('New Task')}>Add Todo</button>
       <ul>
         {todos.map((t) => (
           <li key={t.id} onClick={() => toggleTodo(t.id)}>
-            {t.title} {t.completed ? "✅" : ""}
+            {t.title} {t.completed ? '✅' : ''}
           </li>
         ))}
       </ul>

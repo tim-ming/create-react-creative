@@ -1,8 +1,7 @@
-import { useZustandStore } from "./stores/state";
+import { useZustandStore } from './stores/state';
 
 export default function StateDemo() {
-  const { count, todos, increment, decrement, addTodo, toggleTodo } =
-    useZustandStore();
+  const { count, todos, increment, decrement, addTodo, toggleTodo } = useZustandStore();
 
   return (
     <div>
@@ -18,9 +17,9 @@ export default function StateDemo() {
         <input
           type="text"
           onKeyDown={(e) => {
-            if (e.key === "Enter") {
+            if (e.key === 'Enter') {
               addTodo(e.currentTarget.value);
-              e.currentTarget.value = "";
+              e.currentTarget.value = '';
             }
           }}
         />
@@ -30,7 +29,7 @@ export default function StateDemo() {
               key={todo.id}
               onClick={() => toggleTodo(todo.id)}
               style={{
-                textDecoration: todo.completed ? "line-through" : "none",
+                textDecoration: todo.completed ? 'line-through' : 'none',
               }}
             >
               {todo.title}

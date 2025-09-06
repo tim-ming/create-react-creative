@@ -1,6 +1,6 @@
-import { useSelector, useDispatch } from "react-redux";
-import type { RootState, AppDispatch } from "./stores/state";
-import { increment, decrement, addTodo, toggleTodo } from "./stores/state";
+import { useSelector, useDispatch } from 'react-redux';
+import type { RootState, AppDispatch } from './stores/state';
+import { increment, decrement, addTodo, toggleTodo } from './stores/state';
 
 export default function StateDemo() {
   const count = useSelector((state: RootState) => state.counter.value);
@@ -21,9 +21,9 @@ export default function StateDemo() {
         <input
           type="text"
           onKeyDown={(e) => {
-            if (e.key === "Enter") {
+            if (e.key === 'Enter') {
               dispatch(addTodo(e.currentTarget.value));
-              e.currentTarget.value = "";
+              e.currentTarget.value = '';
             }
           }}
         />
@@ -33,7 +33,7 @@ export default function StateDemo() {
               key={todo.id}
               onClick={() => dispatch(toggleTodo(todo.id))}
               style={{
-                textDecoration: todo.completed ? "line-through" : "none",
+                textDecoration: todo.completed ? 'line-through' : 'none',
               }}
             >
               {todo.title}

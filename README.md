@@ -17,20 +17,17 @@ Tailwind, path aliases, SVG imports, animations, 3D, and creative utilities.
 **Optional Add-ons**
 
 - 🎞️ **Animations**
-
   - [GSAP](https://greensock.com/gsap/)
   - [Framer Motion](https://www.framer.com/motion/)
   - [react-spring](https://react-spring.dev/)
 
 - 🗂️ **State Management**
-
   - [Zustand](https://github.com/pmndrs/zustand)
   - [Valtio](https://github.com/pmndrs/valtio)
   - [Jotai](https://jotai.org/)
   - [Redux Toolkit](https://redux-toolkit.js.org/)
 
 - 🌐 **3D**
-
   - [React Three Fiber (r3f) + Drei](https://docs.pmnd.rs/react-three-fiber/getting-started/introduction)
     - [@react-three-postprocessing](https://github.com/pmndrs/react-three-postprocessing)
     - [leva](https://github.com/pmndrs/leva)

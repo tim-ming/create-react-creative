@@ -1,6 +1,6 @@
 // ===== VALTIO =====
 // Valtio uses proxy-based state management
-import { proxy } from "valtio";
+import { proxy } from 'valtio';
 
 // Global state store
 export const valtioStore = proxy({

@@ -1,7 +1,7 @@
-import { useRef } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
-import { OrbitControls, Box } from "@react-three/drei";
-import * as THREE from "three";
+import { useRef } from 'react';
+import { Canvas, useFrame } from '@react-three/fiber';
+import { OrbitControls, Box } from '@react-three/drei';
+import * as THREE from 'three';
 
 function SpinningBox() {
   const meshRef = useRef<THREE.Mesh>(null!);

@@ -1,10 +1,10 @@
 // ===== RTK (Redux Toolkit) =====
 // RTK uses Redux with modern patterns and TypeScript support
-import { createSlice, configureStore, PayloadAction } from "@reduxjs/toolkit";
+import { createSlice, configureStore, PayloadAction } from '@reduxjs/toolkit';
 
 // Counter slice
 export const counterSlice = createSlice({
-  name: "counter",
+  name: 'counter',
   initialState: {
     value: 0,
   },
@@ -23,7 +23,7 @@ export const counterSlice = createSlice({
 
 // Todos slice
 export const todosSlice = createSlice({
-  name: "todos",
+  name: 'todos',
   initialState: [] as Array<{ id: number; title: string; completed: boolean }>,
   reducers: {
     addTodo: (state, action: PayloadAction<string>) => {

@@ -1,4 +1,4 @@
-import kleur from "kleur";
+import kleur from 'kleur';
 
 interface PackageOption {
   name: string;
@@ -10,14 +10,14 @@ interface PackageOption {
     description: string;
   };
   demo?: {
-    insertion: "GRID" | "EFFECTS";
+    insertion: 'GRID' | 'EFFECTS';
     source: string;
     destination: string; // not used
   };
 }
 
 interface PackageManager {
-  packageName: "npm" | "pnpm" | "yarn" | "bun";
+  packageName: 'npm' | 'pnpm' | 'yarn' | 'bun';
   commands: {
     install: string[];
     add: (dev: boolean) => string[];

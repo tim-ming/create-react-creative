@@ -2,7 +2,7 @@ name: Sync engines.node with create-vite
 
 on:
   schedule:
-    - cron: "0 2 * * *" # run daily at 2am
+    - cron: '0 2 * * *' # run daily at 2am
   workflow_dispatch:
 
 env:
@@ -72,8 +72,8 @@ jobs:
         uses: peter-evans/create-pull-request@v6
         with:
           branch: ${{ env.UPDATE_BRANCH }}
-          commit-message: "chore: sync engines.node with create-vite (${{ steps.parse.outputs.node_versions }})"
-          title: "chore: sync engines.node with create-vite ${{ steps.parse.outputs.node_versions_test }}"
+          commit-message: 'chore: sync engines.node with create-vite (${{ steps.parse.outputs.node_versions }})'
+          title: 'chore: sync engines.node with create-vite ${{ steps.parse.outputs.node_versions_test }}'
           body: |
             This PR updates the `engines.node` field in `package.json` to match
             `create-vite`'s latest Node.js requirement.

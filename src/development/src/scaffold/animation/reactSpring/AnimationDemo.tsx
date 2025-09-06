@@ -1,4 +1,4 @@
-import { useSpring, animated } from "@react-spring/web";
+import { useSpring, animated } from '@react-spring/web';
 
 export default function AnimationDemo() {
   const styles = useSpring({
@@ -13,10 +13,10 @@ export default function AnimationDemo() {
       <animated.div
         style={{
           ...styles,
-          width: "100px",
-          height: "100px",
-          background: "magenta",
-          margin: "20px",
+          width: '100px',
+          height: '100px',
+          background: 'magenta',
+          margin: '20px',
         }}
       />
     </div>
