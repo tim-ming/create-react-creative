@@ -71,19 +71,15 @@ jobs:
         if: steps.update-file.outputs.changed == 'true'
         uses: peter-evans/create-pull-request@v6
         with:
-          # The branch to create and push the changes to
           branch: ${{ env.UPDATE_BRANCH }}
-          # The commit message
           commit-message: "chore: sync engines.node with create-vite (${{ steps.parse.outputs.node_versions }})"
-          # The PR title
-          title: "chore: sync engines.node with create-vite"
-          # The PR body
+          title: "chore: sync engines.node with create-vite ${{ steps.parse.outputs.node_versions_test }}"
           body: |
-            This PR updates the `engines.node` field in `package.json`
-            to match `create-vite`'s latest requirement:
-            ```
-            ${{ steps.parse.outputs.node_versions_test }}
-            ```
+            This PR updates the `engines.node` field in `package.json` to match
+            `create-vite`'s latest Node.js requirement.
+
+            **Old version:** `${{ steps.update-file.outputs.old_version }}`
+            **New version:** `${{ steps.parse.outputs.node_versions_test }}`
 
   test:
     runs-on: ubuntu-latest
