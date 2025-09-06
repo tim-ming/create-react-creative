@@ -15,3 +15,5 @@ src/development/node_modules/**
 !tsconfig.json
 !README.md
 !.gitignore
+!.github/
+!.github/**

@@ -1,0 +1,115 @@
+name: Sync engines.node with create-vite
+
+on:
+  schedule:
+    - cron: "0 2 * * *" # run daily at 2am
+  workflow_dispatch:
+
+env:
+  UPDATE_BRANCH: update-engines-node
+  ACTOR_NAME: ${{ github.actor }}
+  ACTOR_EMAIL: ${{ github.actor }}@users.noreply.github.com
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    outputs:
+      pr-url: ${{ steps.cpr.outputs.pull-request-url }}
+      pr-number: ${{ steps.cpr.outputs.pull-request-number }}
+      node_versions_test: ${{ steps.parse.outputs.node_versions_test }}
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Fetch create-vite package.json
+        run: |
+          curl -s https://raw.githubusercontent.com/vitejs/vite/main/packages/create-vite/package.json > create-vite.json
+
+      - name: Parse Node engines
+        id: parse
+        run: |
+          node_versions=$(jq -r '.engines.node' create-vite.json)
+          echo "Upstream engines.node = $node_versions"
+
+          # Use semver to extract lowest versions per range
+          npm install -g semver
+          node_versions_test=$(node -e "
+          const semver = require('semver');
+          const range = process.argv[1];
+          const parts = range.split('||').map(r => r.trim());
+          const mins = parts.map(r => semver.minVersion(r).version);
+          console.log(JSON.stringify(mins));
+          " "$node_versions")
+
+          echo "Lowest versions: $node_versions_test"
+          echo "node_versions=$node_versions" >> $GITHUB_OUTPUT
+          echo "node_versions_test=$node_versions_test" >> $GITHUB_OUTPUT
+
+      - name: Update package.json if needed
+        run: |
+          CURRENT=$(jq -r '.engines.node' package.json)
+          NEW="${{ steps.parse.outputs.node_versions }}"
+          if [ "$CURRENT" != "$NEW" ]; then
+            echo "Updating engines.node from $CURRENT to $NEW"
+            jq ".engines.node = \"$NEW\"" package.json > package.json.tmp && mv package.json.tmp package.json
+          else
+            echo "No update needed."
+            exit 0
+          fi
+
+      - name: Commit changes
+        env:
+          NODE_VERSIONS: ${{ steps.parse.outputs.node_versions }}
+        run: |
+          if ! git diff --quiet; then
+            git config user.name "$ACTOR_NAME"
+            git config user.email "$ACTOR_EMAIL"
+            git checkout -B $UPDATE_BRANCH
+            git add package.json
+            git commit -m "chore: sync engines.node with create-vite ($NODE_VERSIONS)"
+            git push -f origin $UPDATE_BRANCH
+          fi
+
+      - name: Create Pull Request
+        id: cpr
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: $UPDATE_BRANCH
+          title: "chore: sync engines.node with create-vite"
+          body: |
+            This PR updates the `engines.node` field in `package.json`
+            to match `create-vite`'s latest requirement:
+            ```
+            ${{ steps.parse.outputs.node_versions_test }}
+            ```
+
+  test:
+    runs-on: ubuntu-latest
+    needs: sync
+    if: needs.sync.outputs.pr-url != ''
+    strategy:
+      matrix:
+        node-version: ${{ fromJSON(needs.sync.outputs.node_versions_test) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.UPDATE_BRANCH }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build project
+        run: npm run build
+
+  auto-merge:
+    runs-on: ubuntu-latest
+    needs: [sync, test]
+    if: needs.sync.outputs.pr-url != ''
+    steps:
+      - uses: peter-evans/enable-pull-request-automerge@v3
+        with:
+          pull-request-number: ${{ needs.sync.outputs.pr-number }}
+          merge-method: squash
