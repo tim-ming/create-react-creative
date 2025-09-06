@@ -28,6 +28,9 @@ jobs:
         run: |
           curl -s https://raw.githubusercontent.com/vitejs/vite/main/packages/create-vite/package.json > create-vite.json
 
+      - name: Install runner dependencies
+        run: npm install semver --no-save
+
       - name: Parse Node engines
         id: parse
         run: |
@@ -35,7 +38,7 @@ jobs:
           echo "Upstream engines.node = $node_versions"
 
           # Use semver to extract lowest versions per range
-          node_versions_test=$(npx -p semver node -e "
+          node_versions_test=$(node -e "
           const semver = require('semver');
           const range = process.argv[1];
           const parts = range.split('||').map(r => r.trim());
