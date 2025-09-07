@@ -32,18 +32,25 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^16.3.0",
+    "lint-staged": "^16.1.6",
     "prettier": "^3.6.2",
     "typescript": "^5.9.2",
     "typescript-eslint": "^8.42.0"
   },
   "scripts": {
-    "build": "ncc build src/create-creative-app.ts -o dist",
+    "build": "ncc build src/index.ts -o dist",
     "create": "node dist/index.js",
     "format": "prettier --write .",
     "format-check": "prettier --check .",
     "lint": "eslint .",
-    "lint:fix": "eslint . --ext .ts --fix",
-    "prepare": "husky"
+    "lint:fix": "eslint . --fix"
+  },
+  "lint-staged": {
+    "*.{js,ts}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "!(*.{js,ts})": "prettier --write --ignore-unknown"
   },
   "main": "index.js",
   "directories": {
