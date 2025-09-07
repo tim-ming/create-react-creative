@@ -1,21 +1,19 @@
-# ignore everything
-*
+# ignore node_modules inside scaffold
+src/scaffold/node_modules
 
-# allow source and development dirs
-!src/
-!src/**
+node_modules
+.npm
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 
-# ignore node_modules inside development
-src/development/node_modules/
-src/development/node_modules/**
+dev_scaffolds/
+dev_scaffolds/**
 
-# allow some root files
-!package.json
-!package-lock.json
-!tsconfig.json
-!README.md
-!.gitignore
-!.github/
-!.github/**
-!eslint.config.js
-!prettier.config.js
+!dev_scaffolds/README.md
