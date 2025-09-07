@@ -13,6 +13,9 @@ const gitignorePath = fileURLToPath(new URL('.gitignore', import.meta.url));
 
 export default defineConfig([
   includeIgnoreFile(gitignorePath, 'Imported .gitignore patterns'),
+  {
+    ignores: ['dist/**/*'],
+  },
   // For main app
   {
     files: ['src/*.{ts,tsx,js,jsx}'],
@@ -34,10 +37,9 @@ export default defineConfig([
       ],
     },
   },
-  // For development scaffold
+  // For scaffold scaffold
   {
-    files: ['src/development/**/*.{ts,tsx,js,jsx}'],
-    ignores: ['dist'],
+    files: ['src/scaffold/**/*.{ts,tsx,js,jsx}'],
     plugins: { prettier },
     extends: [
       js.configs.recommended,

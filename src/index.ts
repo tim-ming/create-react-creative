@@ -7,8 +7,8 @@ import { fileURLToPath } from 'node:url';
 import * as p from '@clack/prompts';
 import { execa } from 'execa';
 import kleur from 'kleur';
-import OPTIONS, { NONE } from './constants.js';
-import type { PackageManager, PackageOption } from './types.js';
+import OPTIONS, { NONE } from './lib/constants.js';
+import type { PackageManager, PackageOption } from './lib/types.js';
 import { parse } from 'jsonc-parser';
 import {
   copyDirSafe,
@@ -17,10 +17,10 @@ import {
   getAllRelativeFilePaths,
   getPackageManager,
   parseFlags,
-} from './helpers.js';
+} from './lib/helpers.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const SCAFFOLD_ROOT = path.resolve(__dirname, '../src/development/src/scaffold');
+const SCAFFOLD_ROOT = path.resolve(__dirname, '../src/scaffold/src/scaffold');
 interface WizardState {
   projectName: string;
   scaffold: {
