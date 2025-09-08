@@ -27,15 +27,15 @@ jobs:
 
       - name: Fetch create-vite package.json
         run: |
-          curl -s https://raw.githubusercontent.com/vitejs/vite/main/packages/create-vite/package.json > create-vite.json
+          curl -s https://raw.githubusercontent.com/vitejs/vite/main/packages/create-vite/package.json > "$RUNNER_TEMP/create-vite.json"
 
       - name: Install runner dependencies
-        run: npm install semver --no-save
+        run: npm ci
 
       - name: Parse Node engines
         id: parse
         run: |
-          node_versions=$(jq -r '.engines.node' create-vite.json)
+          node_versions=$(jq -r '.engines.node' "$RUNNER_TEMP/create-vite.json")
           echo "Upstream engines.node = $node_versions"
 
           # Use semver to extract lowest versions per range
