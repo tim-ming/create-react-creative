@@ -1,11 +1,16 @@
-import kleur from 'kleur';
-import type { PackageManager, PackageOption } from './types.js';
+import chalk from 'chalk';
+import type { PackageManager, PackageOption, Template } from './types.js';
+
+const PARENT_WRAPPERS = {
+  GRID: 'Grid',
+  EFFECTS: 'Effects',
+} as const;
 
 const NONE: Readonly<PackageOption> = {
   name: 'none',
-  packageName: '',
+  packages: [],
   cli: {
-    color: kleur.gray,
+    color: chalk.gray,
     displayName: 'none',
     hint: '',
     description: '',
@@ -13,93 +18,93 @@ const NONE: Readonly<PackageOption> = {
 };
 
 // ---------------- Package Managers ----------------
-const PACKAGE_MANAGERS: Readonly<Record<string, Readonly<PackageManager>>> = {
+const PACKAGE_MANAGERS = {
   npm: {
     packageName: 'npm',
     commands: {
-      install: ['install'],
+      install: 'npm install',
       add: (dev) => (dev ? ['install', '-D'] : ['install']),
       addPkgs: (pkgs, dev) => (dev ? ['install', '-D', ...pkgs] : ['install', ...pkgs]),
       createVite: (projectName) => ['create', 'vite@latest', projectName, '--', '--template', 'react-ts'],
-      runDev: 'npm run dev',
+      run: 'npm run',
     },
   },
   pnpm: {
     packageName: 'pnpm',
     commands: {
-      install: ['install'],
+      install: 'pnpm install',
       add: (dev) => (dev ? ['add', '-D'] : ['add']),
       addPkgs: (pkgs, dev) => (dev ? ['add', '-D', ...pkgs] : ['add', ...pkgs]),
       createVite: (projectName) => ['create', 'vite', projectName, '--template', 'react-ts'],
-      runDev: 'pnpm dev',
+      run: 'pnpm',
     },
   },
   yarn: {
     packageName: 'yarn',
     commands: {
-      install: ['install'],
+      install: 'yarn',
       add: (dev) => (dev ? ['add', '-D'] : ['add']),
       addPkgs: (pkgs, dev) => (dev ? ['add', '-D', ...pkgs] : ['add', ...pkgs]),
       createVite: (projectName) => ['create', 'vite', projectName, '--template', 'react-ts'],
-      runDev: 'yarn dev',
+      run: 'yarn',
     },
   },
   bun: {
     packageName: 'bun',
     commands: {
-      install: ['install'],
+      install: 'bun install',
       add: (dev) => (dev ? ['add', '-D'] : ['add']),
       addPkgs: (pkgs, dev) => (dev ? ['add', '-D', ...pkgs] : ['add', ...pkgs]),
       createVite: (projectName) => ['x', 'create-vite@latest', projectName, '--', '--template', 'react-ts'],
-      runDev: 'bun dev',
+      run: 'bun',
     },
   },
-};
+} as const satisfies Record<string, PackageManager>;
 
 // ---------------- Animations ----------------
 const ANIMATIONS: ReadonlyArray<Readonly<PackageOption>> = [
   NONE,
   {
     name: 'gsap',
-    packageName: 'gsap @gsap/react',
+    packages: ['gsap', '@gsap/react'],
     cli: {
       displayName: 'GSAP',
       description: 'GreenSock Animation Platform',
       hint: '',
-      color: kleur.green,
+      color: chalk.green,
     },
     demo: {
-      insertion: 'GRID',
+      insertion: PARENT_WRAPPERS.GRID,
       source: 'animation/gsap',
       destination: 'components',
     },
   },
   {
     name: 'motion',
-    packageName: 'motion',
+    packages: ['motion'],
     cli: {
       displayName: 'motion (framer-motion)',
       description: 'A production-grade animation library for React, JavaScript, and Vue.',
       hint: '',
-      color: kleur.blue,
+      color: chalk.blue,
     },
     demo: {
-      insertion: 'GRID',
+      insertion: PARENT_WRAPPERS.GRID,
       source: 'animation/motion',
       destination: 'components',
     },
   },
   {
     name: 'react-spring',
-    packageName: '@react-spring/web',
+    packages: ['@react-spring/web'],
     cli: {
       displayName: 'react-spring',
       description: 'Open-source spring-physics first animation library',
       hint: '',
-      color: kleur.magenta,
+      color: chalk.magenta,
     },
     demo: {
-      insertion: 'GRID',
+      insertion: PARENT_WRAPPERS.GRID,
       source: 'animation/reactSpring',
       destination: 'components',
     },
@@ -111,60 +116,60 @@ const STATE_MANAGEMENTS: ReadonlyArray<Readonly<PackageOption>> = [
   NONE,
   {
     name: 'zustand',
-    packageName: 'zustand',
+    packages: ['zustand'],
     cli: {
       displayName: 'Zustand',
       description: 'zustand',
       hint: '',
-      color: kleur.green,
+      color: chalk.green,
     },
     demo: {
-      insertion: 'GRID',
+      insertion: PARENT_WRAPPERS.GRID,
       source: 'stateManagement/zustand',
       destination: 'components',
     },
   },
   {
     name: 'jotai',
-    packageName: 'jotai',
+    packages: ['jotai'],
     cli: {
       displayName: 'Jotai',
       description: 'jotai',
       hint: '',
-      color: kleur.cyan,
+      color: chalk.cyan,
     },
     demo: {
-      insertion: 'GRID',
+      insertion: PARENT_WRAPPERS.GRID,
       source: 'stateManagement/jotai',
       destination: 'components',
     },
   },
   {
     name: 'valtio',
-    packageName: 'valtio',
+    packages: ['valtio'],
     cli: {
       displayName: 'Valtio',
       description: 'valtio',
       hint: '',
-      color: kleur.yellow,
+      color: chalk.yellow,
     },
     demo: {
-      insertion: 'GRID',
+      insertion: PARENT_WRAPPERS.GRID,
       source: 'stateManagement/valtio',
       destination: 'components',
     },
   },
   {
     name: 'redux',
-    packageName: 'redux',
+    packages: ['redux'],
     cli: {
       displayName: 'Redux Toolkit',
       description: 'redux',
       hint: '',
-      color: kleur.red,
+      color: chalk.red,
     },
     demo: {
-      insertion: 'GRID',
+      insertion: PARENT_WRAPPERS.GRID,
       source: 'stateManagement/rtk',
       destination: 'components',
     },
@@ -176,30 +181,30 @@ const THREES: ReadonlyArray<Readonly<PackageOption>> = [
   NONE,
   {
     name: 'three',
-    packageName: 'three',
+    packages: ['three'],
     cli: {
       displayName: 'Vanilla three.js',
       description: 'Plain three.js',
       hint: '',
-      color: kleur.magenta,
+      color: chalk.magenta,
     },
     demo: {
-      insertion: 'GRID',
+      insertion: PARENT_WRAPPERS.GRID,
       source: 'three/vanillaThree',
       destination: 'components',
     },
   },
   {
     name: 'react-three-fiber',
-    packageName: 'three @types/three @react-three/fiber @react-three/drei',
+    packages: ['three', '@types/three', '@react-three/fiber', '@react-three/drei'],
     cli: {
       displayName: 'react-three-fiber',
       description: 'React Three Fiber',
       hint: '',
-      color: kleur.blue,
+      color: chalk.blue,
     },
     demo: {
-      insertion: 'GRID',
+      insertion: PARENT_WRAPPERS.GRID,
       source: 'three/r3f',
       destination: 'components',
     },
@@ -210,22 +215,22 @@ const THREES: ReadonlyArray<Readonly<PackageOption>> = [
 const REACT_THREES: ReadonlyArray<Readonly<PackageOption>> = [
   {
     name: 'react-three-postprocessing',
-    packageName: '@react-three/postprocessing',
+    packages: ['@react-three/postprocessing'],
     cli: {
       displayName: 'react-three-postprocessing',
       description: 'Postprocessing effects for R3F',
       hint: '',
-      color: kleur.yellow,
+      color: chalk.yellow,
     },
   },
   {
     name: 'leva',
-    packageName: 'leva',
+    packages: ['leva'],
     cli: {
       displayName: 'leva',
       description: 'GUI controls for React',
       hint: '',
-      color: kleur.red,
+      color: chalk.red,
     },
   },
 ];
@@ -234,33 +239,32 @@ const REACT_THREES: ReadonlyArray<Readonly<PackageOption>> = [
 const CREATIVE: ReadonlyArray<Readonly<PackageOption>> = [
   {
     name: 'lenis',
-    packageName: 'lenis',
+    packages: ['lenis'],
     cli: {
       displayName: 'lenis',
       description: 'Smooth scroll library',
       hint: '',
-      color: kleur.magenta,
+      color: chalk.magenta,
     },
     demo: {
-      insertion: 'EFFECTS',
+      insertion: PARENT_WRAPPERS.EFFECTS,
       source: 'creative/lenis',
       destination: 'components',
     },
   },
   {
     name: '@use-gesture/react',
-    packageName: '@use-gesture/react',
+    packages: ['@use-gesture/react'],
     cli: {
       displayName: '@use-gesture/react',
       description: "The only gesture lib you'll need",
       hint: '',
-      color: kleur.green,
+      color: chalk.green,
     },
   },
 ];
 
-const OPTIONS = {
-  PACKAGE_MANAGERS,
+const LIBRARIES = {
   ANIMATIONS,
   STATE_MANAGEMENTS,
   THREES,
@@ -268,5 +272,40 @@ const OPTIONS = {
   CREATIVE,
 } as const;
 
-export default OPTIONS;
-export { NONE };
+const TEMPLATES = {
+  popular: {
+    animation: ANIMATIONS.find((a) => a.name === 'gsap')!,
+    stateManagement: STATE_MANAGEMENTS.find((s) => s.name === 'zustand')!,
+    three: THREES.find((t) => t.name === 'react-three-fiber')!,
+    reactThree: REACT_THREES.filter(() => false),
+    creative: CREATIVE.filter((c) => c.name === 'lenis'),
+  },
+  nice: {
+    animation: ANIMATIONS.find((a) => a.name === 'gsap')!,
+    stateManagement: STATE_MANAGEMENTS.find((s) => s.name === 'zustand')!,
+    three: THREES.find((t) => t.name === 'react-three-fiber')!,
+    reactThree: REACT_THREES.filter(() => false),
+    creative: CREATIVE.filter((c) => c.name === 'lenis'),
+  },
+} as const satisfies Record<string, Template>;
+
+const HELP_MESSAGE = `\
+Usage: create-creative-app [OPTION]... [DIRECTORY]
+
+Create a new Vite + React project with your chosen libraries used in creative web development.
+With no arguments, start the CLI in interactive mode.
+
+Options:
+  -t, --template NAME        use a specific scaffold template
+  -h, --help                 show this help message
+  -v, --version              print version info
+
+Available templates:
+${chalk.blue('popular       gsap, zustand, react-three-fiber, lenis')}
+`;
+
+const RENAME_FILES: Record<string, string> = {
+  _gitignore: '.gitignore',
+};
+
+export { NONE, TEMPLATES, LIBRARIES, HELP_MESSAGE, RENAME_FILES, PACKAGE_MANAGERS, PARENT_WRAPPERS };

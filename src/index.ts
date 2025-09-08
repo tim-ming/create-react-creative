@@ -1,493 +1,425 @@
 #!/usr/bin/env node
 
 import path from 'node:path';
-import fs from 'fs-extra';
+import fs, { emptyDir } from 'fs-extra';
 import process from 'node:process';
-import { fileURLToPath } from 'node:url';
 import * as p from '@clack/prompts';
-import { execa } from 'execa';
-import kleur from 'kleur';
-import OPTIONS, { NONE } from './lib/constants.js';
-import type { PackageManager, PackageOption } from './lib/types.js';
-import { parse } from 'jsonc-parser';
+import { LIBRARIES, NONE, TEMPLATES, HELP_MESSAGE, PARENT_WRAPPERS, RENAME_FILES } from './lib/constants.js';
+import type { Template } from './lib/types.js';
+import chalk from 'chalk';
 import {
-  copyDirSafe,
   extractExportName,
   flattenObjectValues,
-  getAllRelativeFilePaths,
+  formatTargetDir,
   getPackageManager,
-  parseFlags,
+  isEmpty,
+  isValidPackageName,
+  parseArgv,
+  toValidPackageName,
+  writeDir,
+  writeFile,
 } from './lib/helpers.js';
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const SCAFFOLD_ROOT = path.resolve(__dirname, '../src/scaffold/src/scaffold');
-interface WizardState {
-  projectName: string;
-  scaffold: {
-    animation: PackageOption;
-    stateManagement: PackageOption;
-    three: PackageOption;
-    reactThree: PackageOption[];
-    creative: PackageOption[];
-  };
-}
+import { fileURLToPath } from 'node:url';
+import { parse } from '@babel/parser';
+import traverseModule from '@babel/traverse';
+import generateModule from '@babel/generator';
+import * as babelTypes from '@babel/types';
+import ignore from 'ignore';
 
+const traverse = traverseModule.default ?? traverseModule;
+const generate = generateModule.default ?? generateModule;
+
+const cwd = process.cwd();
+const TEMPLATE_ROOT = path.resolve(fileURLToPath(import.meta.url), '../..', `template`);
+const SCAFFOLD_RELATIVE_ROOT = 'src/demo';
+
+interface WizardState {
+  targetDir: string;
+  packageName: string;
+  template: Template;
+}
 const DEFAULTS: WizardState = {
-  scaffold: {
+  targetDir: 'vite-creative',
+  packageName: 'vite-creative',
+  template: {
     animation: NONE,
     stateManagement: NONE,
     three: NONE,
     reactThree: [],
     creative: [],
   },
-  projectName: '',
 };
 
-async function createViteProject(projectRoot: string, pm: PackageManager) {
-  await execa(pm.packageName, pm.commands.createVite(path.basename(projectRoot)), {
-    stdio: 'pipe',
-  });
-}
+async function promptState(): Promise<WizardState> {
+  const { dir: argDir, template: argTemplate, help: argHelp } = parseArgv(process.argv.slice(2));
+  const argTargetDir = argDir ? formatTargetDir(argDir) : undefined;
 
-async function promptState(initial: WizardState): Promise<WizardState> {
-  p.intro(kleur.cyan('Create your project ⚡'));
+  if (argHelp) {
+    console.log(HELP_MESSAGE);
+    process.exit(0);
+  }
+  p.intro(chalk.cyan('Create your project ⚡'));
 
-  const { projectName, animation, stateManagement, three, reactThree, creative } = await p.group(
-    {
-      projectName: async () =>
-        initial.projectName ||
-        p.text({
-          message: 'Project name:',
-          placeholder: 'my-app',
-          validate: (v) => {
-            if (v.trim().length === 0) return 'Please enter a project name';
-            const targetDir = path.resolve(process.cwd(), v.trim());
-            if (fs.existsSync(targetDir)) {
-              return `A directory named "${v}" already exists here. Please choose another name.`;
-            }
-            return undefined;
-          },
-        }),
+  const cancel = () => {
+    p.cancel('Operation cancelled');
+    process.exit(0);
+  };
 
-      animation: () =>
-        p.select({
-          message: 'Choose an animation library:',
-          initialValue: initial.scaffold.animation,
-          options: OPTIONS.ANIMATIONS.map((a) => ({
-            label: a.cli.color(a.cli.displayName),
-            value: a,
-            hint: a.cli.description,
-          })),
-        }),
+  // 1. Get project name and target dir
+  let targetDir = argTargetDir;
+  if (!targetDir) {
+    const projectName = await p.text({
+      message: 'Project name:',
+      defaultValue: DEFAULTS.targetDir,
+      placeholder: DEFAULTS.targetDir,
+      validate: (value) => {
+        return value.length === 0 || formatTargetDir(value).length > 0 ? undefined : 'Invalid project name';
+      },
+    });
+    if (p.isCancel(projectName)) return cancel();
+    targetDir = formatTargetDir(projectName);
+  }
 
-      stateManagement: () =>
-        p.select({
-          message: 'Choose a state management library:',
-          initialValue: initial.scaffold.stateManagement,
-          options: OPTIONS.STATE_MANAGEMENTS.map((s) => ({
-            label: s.cli.color(s.cli.displayName),
-            value: s,
-            hint: s.cli.description,
-          })),
-        }),
+  // 2. Handle directory if exist and not empty
+  if (fs.existsSync(targetDir) && !isEmpty(targetDir)) {
+    const overwrite = await p.select({
+      message:
+        (targetDir === '.' ? 'Current directory' : `Target directory "${targetDir}"`) +
+        ` is not empty. Please choose how to proceed:`,
+      options: [
+        {
+          label: 'Cancel operation',
+          value: 'no',
+        },
+        {
+          label: 'Remove existing files and continue',
+          value: 'yes',
+        },
+        {
+          label: 'Ignore files and continue',
+          value: 'ignore',
+        },
+      ],
+    });
+    if (p.isCancel(overwrite)) return cancel();
+    switch (overwrite) {
+      case 'yes':
+        emptyDir(targetDir);
+        break;
+      case 'no':
+        cancel();
+    }
+  }
 
-      three: () =>
-        p.select({
-          message: 'Add 3D graphics library?',
-          initialValue: initial.scaffold.three,
-          options: OPTIONS.THREES.map((t) => ({
-            label: t.cli.color(t.cli.displayName),
-            value: t,
-            hint: t.cli.description,
-          })),
-        }),
+  let packageName = path.basename(path.resolve(targetDir));
+  if (!isValidPackageName(packageName)) {
+    const packageNameResult = await p.text({
+      message: 'Package name:',
+      defaultValue: toValidPackageName(packageName),
+      placeholder: toValidPackageName(packageName),
+      validate(dir) {
+        if (!isValidPackageName(dir)) {
+          return 'Invalid package.json name';
+        }
+      },
+    });
+    if (p.isCancel(packageNameResult)) return cancel();
+    packageName = packageNameResult;
+  }
+  let template = Object.entries(TEMPLATES).find(([key, _]) => key === argTemplate)?.[1];
 
-      reactThree: async ({ results }) => {
-        if (results.three?.name == 'react-three-fiber') {
-          return p.multiselect({
-            message: 'Add React Three helpers?',
-            initialValues: initial.scaffold.reactThree?.map((r) => r) ?? [],
-            options: OPTIONS.REACT_THREES.map((r) => ({
-              label: r.cli.color(r.cli.displayName),
-              value: r,
-              hint: r.cli.description,
+  if (!template) {
+    if (argTemplate) p.note(`"${argTemplate}" isn't a valid template. Please customize your own template: `);
+    const initialTemplate = DEFAULTS.template;
+    template = (await p.group(
+      {
+        animation: () =>
+          p.select({
+            message: 'Choose an animation library:',
+            initialValue: initialTemplate.animation,
+            options: LIBRARIES.ANIMATIONS.map((a) => ({
+              label: a.cli.color(a.cli.displayName),
+              value: a,
+              hint: a.cli.description,
+            })),
+          }),
+
+        stateManagement: () =>
+          p.select({
+            message: 'Choose a state management library:',
+            initialValue: initialTemplate.stateManagement,
+            options: LIBRARIES.STATE_MANAGEMENTS.map((s) => ({
+              label: s.cli.color(s.cli.displayName),
+              value: s,
+              hint: s.cli.description,
+            })),
+          }),
+
+        three: () =>
+          p.select({
+            message: 'Add 3D graphics library?',
+            initialValue: initialTemplate.three,
+            options: LIBRARIES.THREES.map((t) => ({
+              label: t.cli.color(t.cli.displayName),
+              value: t,
+              hint: t.cli.description,
+            })),
+          }),
+        reactThree: async ({ results }) => {
+          if (results?.three?.name == 'react-three-fiber') {
+            return p.multiselect({
+              message: 'Add React Three helpers?',
+              initialValues: initialTemplate.reactThree?.map((r) => r) ?? [],
+              options: LIBRARIES.REACT_THREES.map((r) => ({
+                label: r.cli.color(r.cli.displayName),
+                value: r,
+                hint: r.cli.description,
+              })),
+              required: false,
+            });
+          }
+          return [];
+        },
+
+        creative: () =>
+          p.multiselect({
+            message: 'Add creative coding helpers?',
+            initialValues: initialTemplate.creative?.map((c) => c) ?? [],
+            options: LIBRARIES.CREATIVE.map((c) => ({
+              label: c.cli.color(c.cli.displayName),
+              value: c,
+              hint: c.cli.description,
             })),
             required: false,
-          });
-        }
-        return [];
+          }),
       },
-
-      creative: () =>
-        p.multiselect({
-          message: 'Add creative coding helpers?',
-          initialValues: initial.scaffold.creative?.map((c) => c) ?? [],
-          options: OPTIONS.CREATIVE.map((c) => ({
-            label: c.cli.color(c.cli.displayName),
-            value: c,
-            hint: c.cli.description,
-          })),
-          required: false,
-        }),
-    },
-    {
-      onCancel: () => {
-        p.cancel('Operation cancelled.');
-        process.exit(0);
-      },
-    }
-  );
-
-  p.outro(kleur.green('✔ Project setup complete!'));
+      {
+        onCancel: cancel,
+      }
+    )) as Template;
+  }
 
   return {
-    ...initial,
-    projectName,
-    scaffold: {
-      animation,
-      stateManagement,
-      three,
-      reactThree: reactThree as PackageOption[],
-      creative,
-    },
+    targetDir,
+    packageName,
+    template,
   };
 }
 
-const summarize = (state: WizardState): string => {
+function summarize(state: WizardState): string {
   const graphics = [
-    state.scaffold.three?.cli.displayName,
-    ...(state.scaffold.reactThree?.map((r) => r.cli.displayName) ?? []),
+    state.template.three?.cli.displayName,
+    ...(state.template.reactThree?.map((r) => r.cli.displayName) ?? []),
   ].filter(Boolean);
 
-  const graphicsLine = graphics.length > 0 ? `${kleur.bold().cyan('3D/Graphics')}: ${graphics.join(', ')}` : '';
+  const graphicsLine = graphics.length > 0 ? `${chalk.bold.cyan('3D/Graphics')}: ${graphics.join(', ')}` : '';
 
   return [
-    `${kleur.bold().cyan('Project Name')}: ${state.projectName}`,
-    `${kleur.bold().cyan('Automatically Included')}: ${'Tailwind, Path Aliasing'}`,
-    `${kleur.bold().cyan('Animation Libraries')}: ${state.scaffold.animation.cli.displayName}`,
-    `${kleur.bold().cyan('State Management')}: ${state.scaffold.stateManagement.cli.displayName}`,
+    `${chalk.bold.cyan('Project Name')}: ${state.targetDir}`,
+    `${chalk.bold.cyan('Automatically Included')}: ${'Tailwind, Path Aliasing'}`,
+    `${chalk.bold.cyan('Animation Libraries')}: ${state.template.animation.cli.displayName}`,
+    `${chalk.bold.cyan('State Management')}: ${state.template.stateManagement.cli.displayName}`,
     graphicsLine,
-    `${kleur.bold().cyan('Creative tools')}: ${
-      state.scaffold.creative.length ? state.scaffold.creative.map((c) => c.cli.displayName).join(', ') : 'None'
+    `${chalk.bold.cyan('Creative tools')}: ${
+      state.template.creative.length ? state.template.creative.map((c) => c.cli.displayName).join(', ') : 'None'
     }`,
   ].join('\n');
-};
-
-async function setupTailwind(projectRoot: string): Promise<void> {
-  const viteConfigPath = path.join(projectRoot, 'vite.config.ts');
-  let viteConfig = await fs.readFile(viteConfigPath, 'utf8');
-
-  if (!viteConfig.includes('tailwindcss')) {
-    viteConfig =
-      `import tailwindcss from '@tailwindcss/vite'
-` + viteConfig;
-  }
-
-  viteConfig = viteConfig.replace(/plugins:\s*\[([^\]]*)\]/s, (match, plugins) => {
-    if (plugins.includes('tailwindcss()')) return match;
-    return `plugins: [${plugins.trim()}${plugins.trim() ? ', ' : ''}tailwindcss()]`;
-  });
-
-  await fs.writeFile(viteConfigPath, viteConfig, 'utf8');
-
-  const scaffoldCssPath = path.join(SCAFFOLD_ROOT, 'index.css');
-  const indexCssPath = path.join(projectRoot, 'src', 'index.css');
-  await fs.copyFile(scaffoldCssPath, indexCssPath);
 }
 
-async function setupPathAlias(projectRoot: string) {
-  // add tsconfigPaths to vite.config.ts
-  const viteConfigPath = path.join(projectRoot, 'vite.config.ts');
-  let viteConfig = '';
-
-  try {
-    viteConfig = await fs.readFile(viteConfigPath, 'utf8');
-  } catch {
-    throw new Error('vite.config.ts not found');
-  }
-
-  if (!viteConfig.includes('tsconfigPaths')) {
-    viteConfig =
-      `import tsconfigPaths from "vite-tsconfig-paths";
-` + viteConfig;
-  }
-
-  viteConfig = viteConfig.replace(/plugins:\s*\[([^\]]*)\]/s, (match, plugins) => {
-    if (plugins.includes('tsconfigPaths()')) return match;
-    return `plugins: [${plugins.trim()}${plugins.trim() ? ', ' : ''}tsconfigPaths()]`;
+function scaffoldTemplateFiles(projectRoot: string, state: WizardState) {
+  // Get all files from template (with Dirent objects)
+  const entries = fs.readdirSync(TEMPLATE_ROOT, {
+    recursive: true,
+    withFileTypes: true,
   });
 
-  await fs.writeFile(viteConfigPath, viteConfig, 'utf8');
+  // Ensure target directory exists
+  const root = path.join(cwd, state.targetDir);
+  fs.mkdirSync(root, { recursive: true });
 
-  // add path alias to tsconfig.app.json
-  const tsconfigPath = path.join(projectRoot, 'tsconfig.app.json');
-  let tsconfigRaw = '';
-  try {
-    tsconfigRaw = await fs.readFile(tsconfigPath, 'utf8');
-  } catch {
-    throw new Error('tsconfig.app.json not found');
+  // Setup .gitignore filter (if exists)
+  const ig = ignore();
+  const gitignorePath = path.join(
+    TEMPLATE_ROOT,
+    Object.entries(RENAME_FILES).find(([_, v]) => v === '.gitignore')?.[0] ?? '.gitignore'
+  );
+  if (fs.existsSync(gitignorePath)) {
+    ig.add(fs.readFileSync(gitignorePath, 'utf8').split('\n'));
   }
 
-  const tsconfig = parse(tsconfigRaw);
-  tsconfig.compilerOptions ??= {};
-  tsconfig.compilerOptions.paths ??= {};
-  tsconfig.compilerOptions.paths['@/*'] = ['./src/*'];
+  // Filter + map to relative paths in one go
+  const filtered = entries
+    .map((f) => {
+      const fullPath = path.join(f.parentPath ?? TEMPLATE_ROOT, f.name);
+      return {
+        entry: f,
+        relPath: path.relative(TEMPLATE_ROOT, fullPath),
+      };
+    })
+    .filter(({ entry, relPath }) => {
+      if (entry.isDirectory()) return false;
+      if (relPath === 'package.json') return false;
+      if (relPath === 'package-lock.json') return false;
+      if (relPath.startsWith(SCAFFOLD_RELATIVE_ROOT)) return false;
+      if (ig.ignores(relPath)) return false;
+      return true;
+    })
+    .map(({ relPath }) => relPath);
 
-  await fs.writeFile(tsconfigPath, JSON.stringify(tsconfig, null, 2), 'utf8');
-}
-
-async function setupSvgPlugin(projectRoot: string) {
-  // add svgr to vite.config.ts
-  const viteConfigPath = path.join(projectRoot, 'vite.config.ts');
-  let viteConfig = '';
-
-  try {
-    viteConfig = await fs.readFile(viteConfigPath, 'utf8');
-  } catch {
-    throw new Error('vite.config.ts not found');
+  for (const file of filtered) {
+    writeFile(TEMPLATE_ROOT, projectRoot, file);
   }
 
-  if (!viteConfig.includes('vite-plugin-svgr')) {
-    viteConfig =
-      `import svgr from "vite-plugin-svgr";
-` + viteConfig;
-  }
+  const templateLibPkgNames = Object.values(LIBRARIES).flatMap((pkg) => pkg.map((pkg) => pkg.name));
+  const selectedLibPkgNames = Object.values(state.template)
+    .flat()
+    .map((pkg) => pkg.name);
+  const excludedLibPkgNames = templateLibPkgNames.filter((pkg) => !selectedLibPkgNames.includes(pkg));
 
-  viteConfig = viteConfig.replace(/plugins:\s*\[([^\]]*)\]/s, (match, plugins) => {
-    if (plugins.includes('svgr()')) return match;
-    return `plugins: [${plugins.trim()}${plugins.trim() ? ', ' : ''}svgr()]`;
+  // write package.json with updated name and dependencies, delete excluded dependencies
+  const pkgJson = JSON.parse(fs.readFileSync(path.join(TEMPLATE_ROOT, `package.json`), 'utf-8'));
+
+  pkgJson.name = state.packageName;
+  excludedLibPkgNames.forEach((pkgToExclude) => {
+    delete pkgJson.dependencies[pkgToExclude];
   });
 
-  await fs.writeFile(viteConfigPath, viteConfig, 'utf8');
+  writeFile(TEMPLATE_ROOT, projectRoot, 'package.json', JSON.stringify(pkgJson, null, 2) + '\n');
 
-  const viteEnvPath = path.join(projectRoot, 'src', 'vite-env.d.ts');
-  let viteEnv = '';
-  try {
-    viteEnv = await fs.readFile(viteEnvPath, 'utf8');
-  } catch {
-    // ignore
+  // copy scaffold demo files (only demo files, not the demo directory) into src
+  for (const pkg of flattenObjectValues(state.template)) {
+    if (!pkg.demo) continue;
+    writeDir(path.join(TEMPLATE_ROOT, SCAFFOLD_RELATIVE_ROOT, pkg.demo.source), path.join(projectRoot, 'src'), '');
   }
-
-  const line = '/// <reference types="vite-plugin-svgr/client" />';
-  if (!viteEnv.includes(line)) {
-    viteEnv = viteEnv + '\n' + line;
-  }
-
-  await fs.writeFile(viteEnvPath, viteEnv, 'utf8');
 }
 
-async function setupAppTsx(projectRoot: string, state: WizardState): Promise<void> {
-  const scaffoldAppPath = path.join(SCAFFOLD_ROOT, 'App.tsx');
+function setupAppTsxAST(projectRoot: string, state: WizardState) {
   const projectAppPath = path.join(projectRoot, 'src', 'App.tsx');
-  let content = '';
+  const content = fs.readFileSync(projectAppPath, 'utf8');
 
-  // read from scaffold app.tsx
-  content = await fs.readFile(scaffoldAppPath, 'utf8');
-  const imports = new Set<string>();
-  const gridComponents: string[] = [];
-  const effectsComponents: string[] = [];
+  // Parse AST
+  const ast = parse(content, {
+    sourceType: 'module',
+    plugins: ['typescript', 'jsx'],
+  });
 
-  // add components into App.tsx
-  for (const pkg of flattenObjectValues(state.scaffold)) {
+  // Collect existing imports
+  const existingImports = new Set<string>();
+  traverse(ast, {
+    ImportDeclaration(path) {
+      existingImports.add(path.node.source.value);
+    },
+  });
+
+  // Track new imports and wrapper insertions
+  const parentWrappers: Record<
+    (typeof PARENT_WRAPPERS)[keyof typeof PARENT_WRAPPERS],
+    { imports: babelTypes.ImportDeclaration[]; components: babelTypes.JSXElement[] }
+  > = Object.values(PARENT_WRAPPERS).reduce(
+    (acc, wrapper) => {
+      acc[wrapper] = { imports: [], components: [] };
+      return acc;
+    },
+    {} as Record<
+      (typeof PARENT_WRAPPERS)[keyof typeof PARENT_WRAPPERS],
+      { imports: babelTypes.ImportDeclaration[]; components: babelTypes.JSXElement[] }
+    >
+  );
+
+  // Collect new components from state
+  for (const pkg of flattenObjectValues(state.template)) {
     if (!pkg.demo) continue;
-    // get all relative file paths in the demo.source directory
-    const paths = await getAllRelativeFilePaths(path.join(SCAFFOLD_ROOT, pkg.demo.source));
-    // sole file name with .tsx extension (NOT PATH)
-    const tsxFiles = paths.filter((p) => p.endsWith('.tsx'));
 
-    if (tsxFiles.length === 0) {
-      throw new Error(`No tsx components found in ${pkg.demo.source}`);
-    }
-    if (tsxFiles.length > 1) {
-      throw new Error(`Multiple tsx components found in ${pkg.demo.source}`);
+    const demoDir = path.join(TEMPLATE_ROOT, SCAFFOLD_RELATIVE_ROOT, pkg.demo.source); // adjust if needed
+    const tsxFiles = fs.readdirSync(demoDir).filter((f) => f.endsWith('.tsx'));
+
+    if (tsxFiles.length !== 1) {
+      throw new Error(`Expected exactly one .tsx file in ${pkg.demo.source}, found ${tsxFiles.length}`);
     }
 
-    // get default export name as the component name for import and usage
-    const exportName = extractExportName(
-      await fs.readFile(path.join(SCAFFOLD_ROOT, pkg.demo.source, tsxFiles[0]), 'utf8')
-    );
+    const tsxFilePath = path.join(demoDir, tsxFiles[0]);
+    const exportName = extractExportName(fs.readFileSync(tsxFilePath, 'utf8'));
     if (!exportName) {
-      throw new Error(`Could not extract export name from ${path.join(pkg.demo.source, tsxFiles[0])}`);
+      throw new Error(`Could not find default export in ${tsxFilePath}`);
     }
 
-    const importComponents = {
-      path: tsxFiles[0].replace('.tsx', ''),
-      componentName: exportName,
-    };
-
-    const importStatement = `import ${importComponents.componentName} from '@/${importComponents.path}';`;
-    imports.add(importStatement);
-    if (pkg.demo.insertion === 'GRID') {
-      gridComponents.push(`<${importComponents.componentName} />`);
-    } else if (pkg.demo.insertion === 'EFFECTS') {
-      effectsComponents.push(`<${importComponents.componentName} />`);
+    // Add import
+    if (!existingImports.has(`@/${tsxFiles[0].replace(/\.tsx$/, '')}`)) {
+      const imp = babelTypes.importDeclaration(
+        [babelTypes.importDefaultSpecifier(babelTypes.identifier(exportName))],
+        babelTypes.stringLiteral(`@/${tsxFiles[0].replace(/\.tsx$/, '')}`)
+      );
+      parentWrappers[pkg.demo.insertion].imports.push(imp);
     }
+
+    // Add JSX component
+    const jsx = babelTypes.jsxElement(
+      babelTypes.jsxOpeningElement(babelTypes.jsxIdentifier(exportName), []),
+      babelTypes.jsxClosingElement(babelTypes.jsxIdentifier(exportName)),
+      [],
+      false
+    );
+    parentWrappers[pkg.demo.insertion].components.push(jsx);
   }
 
-  // === Add missing imports at the top ===
-  const existingImports: string[] = content.match(/import .+ from .+;/g) || [];
-  const newImports = [...imports].filter((imp) => !existingImports.includes(imp));
-
-  if (newImports.length > 0) {
-    content = newImports.join('\n') + '\n' + content;
-  }
-
-  // === Insert components into grid ===
-  content = content.replace(/(^[ \t]*)<Grid>([\s\S]*?)<\/Grid>/m, (_, indent, inner) => {
-    const existing = inner.trim();
-
-    // children should be indented one level deeper than <Grid>
-    const childIndent = indent + '  ';
-
-    const updated = [existing, ...gridComponents]
-      .filter(Boolean)
-      .map((c) => childIndent + c)
-      .join('\n');
-
-    return `${indent}<Grid>\n${updated}\n${indent}</Grid>`;
+  // Insert missing imports at the top
+  traverse(ast, {
+    Program(path) {
+      const body = path.node.body;
+      const lastImportIndex = body.findIndex((n) => !babelTypes.isImportDeclaration(n));
+      const insertAt = lastImportIndex === -1 ? body.length : lastImportIndex;
+      for (const wrapper of Object.values(PARENT_WRAPPERS)) {
+        body.splice(insertAt, 0, ...parentWrappers[wrapper].imports);
+      }
+    },
   });
 
-  // === Insert components into effects ===
-  content = content.replace(/(^[ \t]*)<Effects>([\s\S]*?)<\/Effects>/m, (_, indent, inner) => {
-    const existing = inner.trim();
+  // Insert JSX children into Grid/Effects
+  traverse(ast, {
+    JSXElement(path) {
+      const name = path.node.openingElement.name;
+      if (!babelTypes.isJSXIdentifier(name)) return;
 
-    // children should be indented one level deeper than <Effects>
-    const childIndent = indent + '  ';
-
-    const updated = [existing, ...effectsComponents]
-      .filter(Boolean)
-      .map((c) => childIndent + c)
-      .join('\n');
-
-    return `${indent}<Effects>\n${updated}\n${indent}</Effects>`;
+      for (const wrapper of Object.values(PARENT_WRAPPERS)) {
+        if (name.name === wrapper) {
+          path.node.children.push(...parentWrappers[wrapper].components);
+        }
+      }
+    },
   });
-  // write to project app.tsx
-  await fs.writeFile(projectAppPath, content, 'utf8');
-}
 
-const runSetup = async (projectRoot: string, state: WizardState, pm: PackageManager, noInstall: boolean) => {
-  const steps: {
-    startMessage: string;
-    endMessage: string;
-    errorMessage: string;
-    action: () => Promise<void>;
-  }[] = [
-    {
-      startMessage: 'Creating Vite + React (TS) project',
-      endMessage: 'Vite project created',
-      errorMessage: 'Failed to create Vite project',
-      action: () => createViteProject(projectRoot, pm),
-    },
-    {
-      startMessage: noInstall ? 'Adding dependencies' : 'Installing selected dependencies',
-      endMessage: noInstall ? 'Dependencies added!' : 'Dependencies installed!',
-      errorMessage: 'Failed to install dependencies',
-      action: () => installDeps(projectRoot, state, pm, noInstall),
-    },
-    {
-      startMessage: 'Configuring TailwindCSS',
-      endMessage: 'Tailwind configured',
-      errorMessage: 'Failed to configure Tailwind',
-      action: () => setupTailwind(projectRoot),
-    },
-    {
-      startMessage: 'Configuring path alias and tsconfig',
-      endMessage: 'Path alias and tsconfig configured',
-      errorMessage: 'Failed to configure path alias and tsconfig',
-      action: () => setupPathAlias(projectRoot),
-    },
-    {
-      startMessage: 'Configuring SVG plugin',
-      endMessage: 'SVG plugin configured',
-      errorMessage: 'Failed to configure SVG plugin',
-      action: () => setupSvgPlugin(projectRoot),
-    },
-    {
-      startMessage: 'Scaffolding example files',
-      endMessage: 'Example files scaffolded',
-      errorMessage: 'Failed to scaffold example files',
-      action: () => scaffoldExampleFiles(projectRoot, state),
-    },
-    {
-      startMessage: 'Updating App.tsx',
-      endMessage: 'App.tsx updated',
-      errorMessage: 'Failed to update App.tsx',
-      action: () => setupAppTsx(projectRoot, state),
-    },
-  ];
+  // Generate code back
+  const { code } = generate(ast, {
+    retainLines: true,
+    comments: true,
+    concise: false,
+  });
 
-  for (const step of steps) {
-    const spinner = p.spinner();
-    spinner.start(step.startMessage);
-
-    try {
-      await step.action();
-      spinner.stop(step.endMessage);
-    } catch (err) {
-      spinner.stop(step.errorMessage);
-      console.error(err);
-      process.exit(1);
-    }
-  }
-};
-
-async function scaffoldExampleFiles(projectRoot: string, state: WizardState) {
-  // copy scaffold demo files
-  for (const pkg of flattenObjectValues(state.scaffold)) {
-    if (!pkg.demo) continue;
-    copyDirSafe(path.join(SCAFFOLD_ROOT, pkg.demo.source), path.join(projectRoot, 'src'));
-  }
-}
-
-async function installDeps(projectRoot: string, state: WizardState, pm: PackageManager, noInstall: boolean) {
-  const devDeps = ['tailwindcss', '@tailwindcss/vite', 'vite-tsconfig-paths', 'vite-plugin-svgr'];
-
-  const deps = flattenObjectValues(state.scaffold)
-    .flatMap((pkg) => pkg.packageName.split(' '))
-    .filter(Boolean);
-
-  const install = async (packages: string[], isDev: boolean) =>
-    packages.length > 0 &&
-    execa(pm.packageName, pm.commands.addPkgs(packages, isDev), {
-      cwd: projectRoot,
-      stdio: 'inherit',
-    });
-
-  // skip installation if noInstall is true
-  if (noInstall) return;
-
-  await install(deps, false);
-  await install(devDeps, true);
+  fs.writeFileSync(projectAppPath, code, 'utf8');
 }
 
 async function main() {
-  const { name, noInstall } = parseFlags(process.argv.slice(2));
-  const pm = getPackageManager();
+  const state = await promptState();
 
-  const initialState: WizardState = { ...DEFAULTS, projectName: name };
-  const state = await promptState(initialState);
-
-  const projectRoot = path.resolve(process.cwd(), state.projectName);
-
-  if (await fs.pathExists(projectRoot)) {
-    p.cancel(kleur.red(`✖ Directory already exists: ${projectRoot}`));
-    process.exit(1);
-  }
+  const projectRoot = path.join(cwd, state.targetDir);
+  const pm = getPackageManager(process.env.npm_config_user_agent);
 
   p.note(summarize(state), 'Configuration Summary');
 
-  await runSetup(projectRoot, state, pm, noInstall);
+  const spinner = p.spinner();
+  spinner.start('Scaffolding template files');
+  scaffoldTemplateFiles(projectRoot, state);
+  // setupAppTsx(projectRoot, state);
+  setupAppTsxAST(projectRoot, state);
+  spinner.stop('Template files scaffolded!');
 
-  p.outro(kleur.bold().green('✔ Project ready!'));
+  p.outro(chalk.bold.green('✔ Project ready!'));
   console.log('\nNext steps:');
-  console.log(`  1. cd ${state.projectName}`);
-  if (!noInstall) {
-    console.log('  2.', pm.commands.runDev);
-  } else {
-    console.log('  2.', pm.commands.install);
-    console.log('  3.', pm.commands.runDev);
-  }
-  console.log('\nGet creative and happy building ✨');
+  console.log(`  1. cd ${state.targetDir}`);
+  console.log('  2.', pm.commands.install + '; ' + pm.commands.run + ' format');
+  console.log('  3.', pm.commands.run + ' dev');
+
+  console.log('\nGet creative and happy building ✨\n');
 }
 
 main().catch((err) => {

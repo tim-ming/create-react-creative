@@ -1,13 +1,12 @@
 import path from 'node:path';
 import fs from 'fs-extra';
-import process from 'node:process';
 import { execa } from 'execa';
-import yargsParser from 'yargs-parser';
-import OPTIONS from './constants.js';
+import { PACKAGE_MANAGERS, RENAME_FILES } from './constants.js';
 import type { PackageManager } from './types.js';
 import { parse as babelParse } from '@babel/parser';
 import traverseModule, { NodePath } from '@babel/traverse';
 import * as t from '@babel/types';
+import mri from 'mri';
 
 const traverse = traverseModule.default ?? traverseModule;
 
@@ -39,50 +38,29 @@ export function extractExportName(content: string): string {
   return name;
 }
 
-export async function getAllRelativeFilePaths(rootPath: string): Promise<string[]> {
-  const files = await fs.readdir(rootPath, {
+export function getAllRelativeFilePaths(rootPath: string): string[] {
+  const files = fs.readdirSync(rootPath, {
     recursive: true,
     withFileTypes: true,
   });
   return files.map((file) => path.join(file.name));
 }
 
-export async function copyDirSafe(srcDir: string, destDir: string) {
-  const entries = await fs.readdir(srcDir, { withFileTypes: true });
-
-  for (const entry of entries) {
-    const srcPath = path.join(srcDir, entry.name);
-    const destPath = path.join(destDir, entry.name);
-
-    if (entry.isDirectory()) {
-      // If it's a directory, ensure it exists and recurse
-      await fs.ensureDir(destPath);
-      await copyDirSafe(srcPath, destPath);
-    } else {
-      // It's a file → check if it already exists
-      if (await fs.pathExists(destPath)) {
-        throw new Error(`Conflict: file already exists at ${destPath}`);
-      }
-      await fs.copyFile(srcPath, destPath);
-    }
-  }
-}
-
-export function getPackageManager(): Readonly<PackageManager> {
-  const userAgent = process.env.npm_config_user_agent ?? '';
-  const acceptedPackageManagers = Object.keys(OPTIONS.PACKAGE_MANAGERS);
-  const pm = Object.keys(OPTIONS.PACKAGE_MANAGERS).find((key) => {
+export function getPackageManager(userAgent: string | undefined): Readonly<PackageManager> {
+  if (!userAgent) return PACKAGE_MANAGERS.npm;
+  const acceptedPackageManagers = Object.keys(PACKAGE_MANAGERS);
+  const pm = Object.keys(PACKAGE_MANAGERS).find((key) => {
     if (userAgent.startsWith(key)) {
       return key;
     }
-  });
+  }) as keyof typeof PACKAGE_MANAGERS | undefined;
 
   if (!pm) {
     throw new Error(
       'Package Manager must be one of: ' + acceptedPackageManagers.join(', ') + '. You have: ' + userAgent
     );
   }
-  return OPTIONS.PACKAGE_MANAGERS[pm];
+  return PACKAGE_MANAGERS[pm];
 }
 
 export async function isCommandAvailable(cmd: string): Promise<boolean> {
@@ -94,19 +72,107 @@ export async function isCommandAvailable(cmd: string): Promise<boolean> {
   }
 }
 
-export function parseFlags(argv: string[]): {
-  name: string;
-  noInstall: boolean;
+export function parseArgv(argv: string[]): {
+  dir?: string;
+  help: boolean;
+  template?: string;
 } {
-  const args = yargsParser(argv, {
-    string: ['name'],
-    boolean: ['no-install'],
-    configuration: { 'camel-case-expansion': true },
-  }) as { name?: string; _: string[]; noInstall?: boolean };
+  const args = mri(argv, {
+    boolean: ['help'],
+    string: ['template'],
+    alias: {
+      h: 'help',
+      t: 'template',
+    },
+    default: {
+      dir: undefined,
+      help: false,
+      template: undefined,
+    },
+  });
 
   return {
-    // Prefer explicit --name, fallback to first positional arg
-    name: args.name ?? args._[0] ?? '',
-    noInstall: args.noInstall ?? false,
+    dir: args._[0] || undefined,
+    help: args.help,
+    template: args.template,
   };
+}
+
+export function insertComponents(content: string, tag: string, components: string[]): string {
+  const regex = new RegExp(`(^[ \\t]*)<${tag}>([\\s\\S]*?)<\\/${tag}>`, 'm');
+
+  return content.replace(regex, (_, indent: string, inner: string) => {
+    const existing = inner.trim();
+
+    // children indented one level deeper than the parent tag
+    const childIndent = indent + '  ';
+
+    const updated = [existing, ...components]
+      .filter(Boolean)
+      .map((c) => childIndent + c)
+      .join('\n');
+
+    return `${indent}<${tag}>\n${updated}\n${indent}</${tag}>`;
+  });
+}
+
+// --- Helper functions inspired by create-vite ---
+
+export function formatTargetDir(targetDir: string) {
+  return targetDir
+    .trim() // 1. remove whitespace before/after
+    .replace(/\/+$/g, ''); // 2. remove trailing slashes
+}
+
+export function copy(src: string, dest: string) {
+  const stat = fs.statSync(src);
+  if (stat.isDirectory()) {
+    copyDir(src, dest);
+  } else {
+    fs.copyFileSync(src, dest);
+  }
+}
+
+export function copyDir(srcDir: string, destDir: string) {
+  fs.mkdirSync(destDir, { recursive: true });
+  for (const file of fs.readdirSync(srcDir)) {
+    const srcFile = path.resolve(srcDir, file);
+    const destFile = path.resolve(destDir, file);
+    copy(srcFile, destFile);
+  }
+}
+
+export const writeFile = (srcFolder: string, destFolder: string, file: string, content?: string) => {
+  const targetPath = path.join(destFolder, RENAME_FILES[file] ?? file);
+
+  // ensure parent directory exists
+  fs.mkdirSync(path.dirname(targetPath), { recursive: true });
+
+  if (content) {
+    fs.writeFileSync(targetPath, content, 'utf8');
+  } else {
+    fs.copyFileSync(path.join(srcFolder, file), targetPath);
+  }
+};
+
+export const writeDir = (srcFolder: string, destFolder: string, dir: string) => {
+  copyDir(path.join(srcFolder, dir), path.join(destFolder, dir));
+};
+
+export function isValidPackageName(projectName: string) {
+  return /^(?:@[a-z\d\-*~][a-z\d\-*._~]*\/)?[a-z\d\-~][a-z\d\-._~]*$/.test(projectName);
+}
+
+export function toValidPackageName(projectName: string) {
+  return projectName
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/^[._]/, '')
+    .replace(/[^a-z\d\-~]+/g, '-');
+}
+
+export function isEmpty(path: string) {
+  const files = fs.readdirSync(path);
+  return files.length === 0 || (files.length === 1 && files[0] === '.git');
 }

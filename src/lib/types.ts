@@ -1,16 +1,17 @@
-import kleur from 'kleur';
+import ChalkInstance from 'chalk';
+import type { PARENT_WRAPPERS } from './constants.js';
 
 interface PackageOption {
   name: string;
-  packageName: string;
+  packages: string[];
   cli: {
-    color: kleur.Color;
+    color: typeof ChalkInstance;
     displayName: string;
     hint: string;
     description: string;
   };
   demo?: {
-    insertion: 'GRID' | 'EFFECTS';
+    insertion: (typeof PARENT_WRAPPERS)[keyof typeof PARENT_WRAPPERS];
     source: string;
     destination: string; // not used
   };
@@ -19,12 +20,20 @@ interface PackageOption {
 interface PackageManager {
   packageName: 'npm' | 'pnpm' | 'yarn' | 'bun';
   commands: {
-    install: string[];
+    install: string;
     add: (dev: boolean) => string[];
     addPkgs: (pkgs: string[], dev: boolean) => string[];
     createVite: (projectName: string) => string[];
-    runDev: string;
+    run: string;
   };
 }
 
-export type { PackageOption, PackageManager };
+interface Template extends Record<string, PackageOption[] | PackageOption> {
+  animation: PackageOption;
+  stateManagement: PackageOption;
+  three: PackageOption;
+  reactThree: PackageOption[];
+  creative: PackageOption[];
+}
+
+export type { PackageOption, PackageManager, Template };
