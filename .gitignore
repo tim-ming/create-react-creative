@@ -1,6 +1,3 @@
-# ignore node_modules inside scaffold
-src/scaffold/node_modules
-
 node_modules
 .npm
 .vscode/*
@@ -13,7 +10,14 @@ node_modules
 *.sln
 *.sw?
 
-dev_scaffolds/
-dev_scaffolds/**
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-!dev_scaffolds/README.md
+dist
+dist-ssr
+*.local
