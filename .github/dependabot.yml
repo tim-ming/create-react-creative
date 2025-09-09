@@ -1,0 +1,25 @@
+version: 2
+updates:
+  # Keep npm dependencies up to date
+  - package-ecosystem: npm
+    directory: / # Location of package.json
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: 'chore(deps):'
+
+  # Keep GitHub Actions versions up to date
+  - package-ecosystem: github-actions
+    directory: / # Root of the repo
+    schedule:
+      interval: monthly
+    commit-message:
+      prefix: 'chore(ci):'
+
+  # Keep template dependencies up to date
+  - package-ecosystem: npm
+    directory: /template/
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: 'chore(deps-template):'
