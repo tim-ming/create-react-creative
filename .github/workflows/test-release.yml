@@ -20,7 +20,7 @@ jobs:
           --health-interval=5s
           --health-timeout=2s
           --health-retries=20
-          --mount type=tmpfs,destination=/verdaccio/storage
+          --mount type=volume,destination=/verdaccio/storage
 
     strategy:
       matrix:
