@@ -88,11 +88,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tim-ming/npx.git"
+    "url": "git+https://github.com/tim-ming/create-react-creative.git"
   },
   "keywords": [],
   "bugs": {
-    "url": "https://github.com/tim-ming/npx/issues"
+    "url": "https://github.com/tim-ming/create-react-creative/issues"
   },
-  "homepage": "https://github.com/tim-ming/npx#readme"
+  "homepage": "https://github.com/tim-ming/create-react-creative#readme"
 }

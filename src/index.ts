@@ -37,8 +37,8 @@ interface WizardState {
   libraries: Libraries;
 }
 const DEFAULTS: WizardState = {
-  targetDir: 'vite-creative',
-  packageName: 'vite-creative',
+  targetDir: 'react-creative',
+  packageName: 'react-creative',
   libraries: {
     animation: NONE,
     stateManagement: NONE,
