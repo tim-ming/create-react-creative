@@ -17,9 +17,11 @@ jobs:
           - 4873:4873
         options: >-
           --health-cmd "curl -f http://localhost:4873 || exit 1"
-          --health-interval 5s
-          --health-timeout 2s
-          --health-retries 10
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 20
+        volumes:
+          - /tmp/verdaccio/storage:/verdaccio/storage
 
     strategy:
       matrix:
