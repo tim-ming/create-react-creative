@@ -5,6 +5,13 @@ on:
     - cron: '0 2 * * *' # run daily at 2am
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: sync-engines-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   UPDATE_BRANCH: update-engines-node
   ACTOR_NAME: ${{ github.actor }}
@@ -12,7 +19,10 @@ env:
 
 jobs:
   sync:
+    # only run on dev branch
+    if: github.ref == 'refs/heads/dev'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: write
       pull-requests: write
@@ -24,13 +34,22 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+        with:
+          ref: dev
+
+      - name: Setup Node with npm cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+          cache: npm
+          cache-dependency-path: package-lock.json
 
       - name: Fetch create-vite package.json
         run: |
           curl -s https://raw.githubusercontent.com/vitejs/vite/main/packages/create-vite/package.json > "$RUNNER_TEMP/create-vite.json"
 
       - name: Install runner dependencies
-        run: npm ci
+        run: npm ci --no-audit --no-fund --prefer-offline
 
       - name: Parse Node engines
         id: parse
@@ -80,33 +99,3 @@ jobs:
 
             **Old version:** `${{ steps.update-file.outputs.old_version }}`
             **New version:** `${{ steps.parse.outputs.node_versions_test }}`
-
-  test:
-    runs-on: ubuntu-latest
-    needs: sync
-    if: needs.sync.outputs.pr-url != ''
-    strategy:
-      matrix:
-        node-version: ${{ fromJSON(needs.sync.outputs.node_versions_test) }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ env.UPDATE_BRANCH }}
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node-version }}
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build project
-        run: npm run build
-
-  auto-merge:
-    runs-on: ubuntu-latest
-    needs: [sync, test]
-    if: needs.sync.outputs.pr-url != ''
-    steps:
-      - uses: peter-evans/enable-pull-request-automerge@v3
-        with:
-          pull-request-number: ${{ needs.sync.outputs.pr-number }}
-          merge-method: squash

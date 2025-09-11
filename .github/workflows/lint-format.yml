@@ -2,28 +2,49 @@ name: Lint and Format
 
 on:
   push:
-    branches: ['*']
+    branches: [dev]
+    paths-ignore: [README.md, LICENSE, 'docs/**']
   pull_request:
-    branches: [main]
+    branches: [next, main]
+    paths-ignore: [README.md, LICENSE, 'docs/**']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lint-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   lint-and-format:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Node.js
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: 'lts/*'
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Get npm cache directory
+        id: npm-cache-dir
+        run: echo "dir=$(npm config get cache)" >> $GITHUB_OUTPUT
+
+      - uses: actions/cache@v4
+        id: npm-dev-cache
+        with:
+          path: ${{ steps.npm-cache-dir.outputs.dir }}
+          key: ${{ runner.os }}-npm-dev-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-dev-
+
+      - name: Install dev deps only
+        run: npm ci --only=dev --prefer-offline
 
       - name: Run Prettier check
-        run: npm run format-check
+        run: npm run format:check
 
       - name: Run ESLint
         run: npm run lint

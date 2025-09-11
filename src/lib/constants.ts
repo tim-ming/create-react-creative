@@ -272,25 +272,39 @@ const LIBRARIES = {
   CREATIVE,
 } as const;
 
+// ---------------- Templates ----------------
 const TEMPLATES = {
   popular: {
-    animation: ANIMATIONS.find((a) => a.name === 'gsap')!,
-    stateManagement: STATE_MANAGEMENTS.find((s) => s.name === 'zustand')!,
-    three: THREES.find((t) => t.name === 'react-three-fiber')!,
-    reactThree: REACT_THREES.filter(() => false),
-    creative: CREATIVE.filter((c) => c.name === 'lenis'),
+    cli: {
+      color: chalk.blue,
+      displayName: 'popular',
+    },
+    libs: {
+      animation: ANIMATIONS.find((a) => a.name === 'gsap')!,
+      stateManagement: STATE_MANAGEMENTS.find((s) => s.name === 'zustand')!,
+      three: THREES.find((t) => t.name === 'react-three-fiber')!,
+      reactThree: REACT_THREES.filter(() => false),
+      creative: CREATIVE.filter((c) => c.name === 'lenis'),
+    },
   },
-  nice: {
-    animation: ANIMATIONS.find((a) => a.name === 'gsap')!,
-    stateManagement: STATE_MANAGEMENTS.find((s) => s.name === 'zustand')!,
-    three: THREES.find((t) => t.name === 'react-three-fiber')!,
-    reactThree: REACT_THREES.filter(() => false),
-    creative: CREATIVE.filter((c) => c.name === 'lenis'),
-  },
-} as const satisfies Record<string, Template>;
+} as const satisfies Template;
+
+// ---------------- Dynamic Help Message ----------------
+function renderTemplateSummary(template: (typeof TEMPLATES)[keyof typeof TEMPLATES]) {
+  const libs: PackageOption[] = [
+    template.libs.animation,
+    template.libs.stateManagement,
+    template.libs.three,
+    ...(template.libs.reactThree ?? []),
+    ...(template.libs.creative ?? []),
+  ].filter(Boolean) as PackageOption[];
+
+  const colored = libs.map((lib) => lib.cli.color(lib.cli.displayName));
+  return `${template.cli.color(template.cli.displayName)} ${chalk.gray('----')} ${colored.join(' ')}`;
+}
 
 const HELP_MESSAGE = `\
-Usage: create-creative-app [OPTION]... [DIRECTORY]
+Usage: create-react-creative [OPTION]... [DIRECTORY]
 
 Create a new Vite + React project with your chosen libraries used in creative web development.
 With no arguments, start the CLI in interactive mode.
@@ -301,7 +315,8 @@ Options:
   -v, --version              print version info
 
 Available templates:
-${chalk.blue('popular       gsap, zustand, react-three-fiber, lenis')}
+
+${Object.values(TEMPLATES).map(renderTemplateSummary).join('\n')}
 `;
 
 const RENAME_FILES: Record<string, string> = {
