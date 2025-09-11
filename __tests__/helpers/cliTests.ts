@@ -13,11 +13,11 @@ export function cliTests(cmd: string, tmpDirName: string) {
   const templatePath = path.join(rootDir, 'template');
 
   // we need to do this because of how the repo develops on the template directly
-  const gitIgnore = fs.readFileSync(path.join(templatePath, '_gitignore'), 'utf-8');
+  const npmignore = fs.readFileSync(path.join(templatePath, '.npmignore'), 'utf-8');
   const templateFiles = fs
     .readdirSync(templatePath)
     .map((file) => (file === '_gitignore' ? '.gitignore' : file))
-    .filter((file) => !gitIgnore.includes(file))
+    .filter((file) => !npmignore.includes(file))
     .filter((file) => !['package-lock.json', 'pnpm-lock.yaml', 'yarn.lock', 'bun.lockb'].includes(file))
     .sort();
 

@@ -10,7 +10,7 @@ test('test registry is set correctly', () => {
 
   // 2. npm itself resolves the same registry
   const { stdout } = execaSync('npm', ['config', 'get', 'registry']);
-  expect(stdout.trim()).toBe('http://localhost:4873/');
+  expect(stdout.trim()).toBe('http://localhost:4873');
 });
 
 cliTests('npm create react-creative --', 'publish-test');
