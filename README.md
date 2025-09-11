@@ -1,7 +1,7 @@
 # 🚀 React Creative Starter
 
 [![npm version](https://img.shields.io/npm/v/create-react-creative?color=brightgreen&logo=npm)](https://www.npmjs.com/package/create-react-creative)
-[![CI](https://github.com/tim-ming/create-react-creative/actions/workflows/pr.yml/badge.svg)](https://github.com/tim-ming/create-react-creative/actions/workflows/pr.yml)
+[![CI](https://github.com/tim-ming/create-react-creative/actions/workflows/release.yml/badge.svg)](https://github.com/tim-ming/create-react-creative/actions/workflows/release.yml)
 [![License](https://img.shields.io/github/license/tim-ming/create-react-creative?color=blue)](LICENSE)
 [![npm downloads](https://img.shields.io/npm/dm/create-react-creative.svg)](https://www.npmjs.com/package/create-react-creative)
 [![semantic-release: angular](https://img.shields.io/badge/semantic--release-angular-e10079?logo=semantic-release)](https://github.com/semantic-release/semantic-release)
@@ -57,21 +57,4 @@ npm create react-creative
 - Lenis (smooth scrolling)
 - use-gesture
 
-## ⚡ Getting Started
-
-1. **Scaffold a new project**
-
-   ```bash
-   npm create react-creative
-   ```
-
-2. **Follow the wizard prompts** to pick your stack and add-ons.
-
-3. **Install dependencies & run the dev server**
-   ```bash
-   cd my-app
-   npm install
-   npm run dev
-   ```
-
-That's it — you'll have a modern React + Vite app with all your chosen creative tools ready to go.
+Still in early development, website coming soon.
