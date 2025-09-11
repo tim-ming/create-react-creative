@@ -41,7 +41,7 @@ jobs:
             ${{ runner.os }}-npm-dev-
 
       - name: Install dev deps only
-        run: npm ci --only=dev --no-audit --no-fund --prefer-offline
+        run: npm ci --only=dev --prefer-offline
 
       - name: Run Prettier check
         run: npm run format:check
