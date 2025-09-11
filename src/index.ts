@@ -1,11 +1,9 @@
-#!/usr/bin/env node
-
 import path from 'node:path';
 import fs, { emptyDir } from 'fs-extra';
 import process from 'node:process';
 import * as p from '@clack/prompts';
 import { LIBRARIES, NONE, TEMPLATES, HELP_MESSAGE, PARENT_WRAPPERS, RENAME_FILES } from './lib/constants.js';
-import type { Template } from './lib/types.js';
+import type { Libraries } from './lib/types.js';
 import chalk from 'chalk';
 import {
   extractExportName,
@@ -36,12 +34,12 @@ const SCAFFOLD_RELATIVE_ROOT = 'src/demo';
 interface WizardState {
   targetDir: string;
   packageName: string;
-  template: Template;
+  libraries: Libraries;
 }
 const DEFAULTS: WizardState = {
   targetDir: 'vite-creative',
   packageName: 'vite-creative',
-  template: {
+  libraries: {
     animation: NONE,
     stateManagement: NONE,
     three: NONE,
@@ -58,7 +56,7 @@ async function promptState(): Promise<WizardState> {
     console.log(HELP_MESSAGE);
     process.exit(0);
   }
-  p.intro(chalk.cyan('Create your project ⚡'));
+  p.intro(chalk.cyan('Create your creative project ⚡'));
 
   const cancel = () => {
     p.cancel('Operation cancelled');
@@ -126,17 +124,18 @@ async function promptState(): Promise<WizardState> {
     if (p.isCancel(packageNameResult)) return cancel();
     packageName = packageNameResult;
   }
-  let template = Object.entries(TEMPLATES).find(([key, _]) => key === argTemplate)?.[1];
-
-  if (!template) {
+  const template = Object.entries(TEMPLATES).find(([key, _]) => key === argTemplate)?.[1];
+  let libraries = template?.libs;
+  if (!libraries) {
     if (argTemplate) p.note(`"${argTemplate}" isn't a valid template. Please customize your own template: `);
-    const initialTemplate = DEFAULTS.template;
-    template = (await p.group(
+    const initialLibraries = DEFAULTS.libraries;
+
+    libraries = (await p.group(
       {
         animation: () =>
           p.select({
             message: 'Choose an animation library:',
-            initialValue: initialTemplate.animation,
+            initialValue: initialLibraries.animation,
             options: LIBRARIES.ANIMATIONS.map((a) => ({
               label: a.cli.color(a.cli.displayName),
               value: a,
@@ -147,7 +146,7 @@ async function promptState(): Promise<WizardState> {
         stateManagement: () =>
           p.select({
             message: 'Choose a state management library:',
-            initialValue: initialTemplate.stateManagement,
+            initialValue: initialLibraries.stateManagement,
             options: LIBRARIES.STATE_MANAGEMENTS.map((s) => ({
               label: s.cli.color(s.cli.displayName),
               value: s,
@@ -158,7 +157,7 @@ async function promptState(): Promise<WizardState> {
         three: () =>
           p.select({
             message: 'Add 3D graphics library?',
-            initialValue: initialTemplate.three,
+            initialValue: initialLibraries.three,
             options: LIBRARIES.THREES.map((t) => ({
               label: t.cli.color(t.cli.displayName),
               value: t,
@@ -169,7 +168,7 @@ async function promptState(): Promise<WizardState> {
           if (results?.three?.name == 'react-three-fiber') {
             return p.multiselect({
               message: 'Add React Three helpers?',
-              initialValues: initialTemplate.reactThree?.map((r) => r) ?? [],
+              initialValues: initialLibraries.reactThree?.map((r) => r) ?? [],
               options: LIBRARIES.REACT_THREES.map((r) => ({
                 label: r.cli.color(r.cli.displayName),
                 value: r,
@@ -184,7 +183,7 @@ async function promptState(): Promise<WizardState> {
         creative: () =>
           p.multiselect({
             message: 'Add creative coding helpers?',
-            initialValues: initialTemplate.creative?.map((c) => c) ?? [],
+            initialValues: initialLibraries.creative?.map((c) => c) ?? [],
             options: LIBRARIES.CREATIVE.map((c) => ({
               label: c.cli.color(c.cli.displayName),
               value: c,
@@ -196,32 +195,32 @@ async function promptState(): Promise<WizardState> {
       {
         onCancel: cancel,
       }
-    )) as Template;
+    )) as Libraries;
   }
 
   return {
     targetDir,
     packageName,
-    template,
+    libraries,
   };
 }
 
 function summarize(state: WizardState): string {
   const graphics = [
-    state.template.three?.cli.displayName,
-    ...(state.template.reactThree?.map((r) => r.cli.displayName) ?? []),
+    state.libraries.three?.cli.displayName,
+    ...(state.libraries.reactThree?.map((r) => r.cli.displayName) ?? []),
   ].filter(Boolean);
 
   const graphicsLine = graphics.length > 0 ? `${chalk.bold.cyan('3D/Graphics')}: ${graphics.join(', ')}` : '';
 
   return [
     `${chalk.bold.cyan('Project Name')}: ${state.targetDir}`,
-    `${chalk.bold.cyan('Automatically Included')}: ${'Tailwind, Path Aliasing'}`,
-    `${chalk.bold.cyan('Animation Libraries')}: ${state.template.animation.cli.displayName}`,
-    `${chalk.bold.cyan('State Management')}: ${state.template.stateManagement.cli.displayName}`,
+    `${chalk.bold.cyan('Automatically Included')}: ${'Tailwind, Path Aliasing, Svgr'}`,
+    `${chalk.bold.cyan('Animation Libraries')}: ${state.libraries.animation.cli.displayName}`,
+    `${chalk.bold.cyan('State Management')}: ${state.libraries.stateManagement.cli.displayName}`,
     graphicsLine,
     `${chalk.bold.cyan('Creative tools')}: ${
-      state.template.creative.length ? state.template.creative.map((c) => c.cli.displayName).join(', ') : 'None'
+      state.libraries.creative.length ? state.libraries.creative.map((c) => c.cli.displayName).join(', ') : 'None'
     }`,
   ].join('\n');
 }
@@ -271,7 +270,7 @@ function scaffoldTemplateFiles(projectRoot: string, state: WizardState) {
   }
 
   const templateLibPkgNames = Object.values(LIBRARIES).flatMap((pkg) => pkg.map((pkg) => pkg.name));
-  const selectedLibPkgNames = Object.values(state.template)
+  const selectedLibPkgNames = Object.values(state.libraries)
     .flat()
     .map((pkg) => pkg.name);
   const excludedLibPkgNames = templateLibPkgNames.filter((pkg) => !selectedLibPkgNames.includes(pkg));
@@ -287,7 +286,7 @@ function scaffoldTemplateFiles(projectRoot: string, state: WizardState) {
   writeFile(TEMPLATE_ROOT, projectRoot, 'package.json', JSON.stringify(pkgJson, null, 2) + '\n');
 
   // copy scaffold demo files (only demo files, not the demo directory) into src
-  for (const pkg of flattenObjectValues(state.template)) {
+  for (const pkg of flattenObjectValues(state.libraries)) {
     if (!pkg.demo) continue;
     writeDir(path.join(TEMPLATE_ROOT, SCAFFOLD_RELATIVE_ROOT, pkg.demo.source), path.join(projectRoot, 'src'), '');
   }
@@ -327,7 +326,7 @@ function setupAppTsxAST(projectRoot: string, state: WizardState) {
   );
 
   // Collect new components from state
-  for (const pkg of flattenObjectValues(state.template)) {
+  for (const pkg of flattenObjectValues(state.libraries)) {
     if (!pkg.demo) continue;
 
     const demoDir = path.join(TEMPLATE_ROOT, SCAFFOLD_RELATIVE_ROOT, pkg.demo.source); // adjust if needed
@@ -406,16 +405,16 @@ async function main() {
 
   p.note(summarize(state), 'Configuration Summary');
 
-  const spinner = p.spinner();
-  spinner.start('Scaffolding template files');
+  p.log.step(`Scaffolding project in ${projectRoot}...`);
   scaffoldTemplateFiles(projectRoot, state);
   // setupAppTsx(projectRoot, state);
   setupAppTsxAST(projectRoot, state);
-  spinner.stop('Template files scaffolded!');
+  p.log.success('Template files scaffolded!');
 
   p.outro(chalk.bold.green('✔ Project ready!'));
+  const cdProjectName = path.relative(cwd, projectRoot);
   console.log('\nNext steps:');
-  console.log(`  1. cd ${state.targetDir}`);
+  console.log(`  1. cd ${cdProjectName}`);
   console.log('  2.', pm.commands.install + '; ' + pm.commands.run + ' format');
   console.log('  3.', pm.commands.run + ' dev');
 

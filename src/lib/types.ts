@@ -27,8 +27,7 @@ interface PackageManager {
     run: string;
   };
 }
-
-interface Template extends Record<string, PackageOption[] | PackageOption> {
+interface Libraries extends Record<string, PackageOption[] | PackageOption> {
   animation: PackageOption;
   stateManagement: PackageOption;
   three: PackageOption;
@@ -36,4 +35,13 @@ interface Template extends Record<string, PackageOption[] | PackageOption> {
   creative: PackageOption[];
 }
 
-export type { PackageOption, PackageManager, Template };
+interface TemplateEntry {
+  cli: {
+    color: typeof ChalkInstance;
+    displayName: string;
+  };
+  libs: Libraries;
+}
+type Template = Record<string, TemplateEntry>;
+
+export type { PackageOption, PackageManager, Template, Libraries };
