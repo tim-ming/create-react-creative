@@ -21,3 +21,7 @@ lerna-debug.log*
 dist
 dist-ssr
 *.local
+
+template/node_modules
+
+__tests__/tmp

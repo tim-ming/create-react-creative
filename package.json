@@ -1,50 +1,80 @@
 {
-  "name": "create-creative-app",
-  "version": "0.1.0",
+  "name": "create-react-creative",
+  "version": "1.0.0",
+  "author": "Tim Ming",
   "description": "Interactive wizard to scaffold a creative Vite + React app",
   "type": "module",
   "engines": {
-    "node": ">18"
+    "node": "^20.19.0 || >=22.12.0"
   },
   "license": "MIT",
-  "dependencies": {
+  "bin": {
+    "create-react-creative": "index.js"
+  },
+  "main": "index.js",
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
     "@babel/generator": "^7.28.3",
     "@babel/parser": "^7.28.3",
     "@babel/traverse": "^7.28.3",
-    "@clack/prompts": "^0.11.0",
-    "@types/babel__traverse": "^7.28.0",
-    "@types/fs-extra": "^11.0.4",
-    "chalk": "^5.6.0",
-    "execa": "^8.0.1",
-    "fs-extra": "^11.1.1",
-    "ignore": "^7.0.5",
-    "mri": "^1.2.0"
-  },
-  "devDependencies": {
     "@babel/types": "^7.28.4",
+    "@clack/prompts": "^0.11.0",
     "@eslint/js": "^9.35.0",
     "@types/babel__generator": "^7.27.0",
+    "@types/babel__traverse": "^7.28.0",
+    "@types/fs-extra": "^11.0.4",
+    "@vercel/ncc": "^0.38.3",
+    "chalk": "^5.6.0",
     "eslint": "^9.35.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.4",
+    "execa": "^8.0.1",
+    "fs-extra": "^11.1.1",
     "globals": "^16.3.0",
+    "ignore": "^7.0.5",
     "lint-staged": "^16.1.6",
+    "mri": "^1.2.0",
     "prettier": "^3.6.2",
+    "semantic-release": "^24.2.8",
+    "semver": "^7.7.2",
+    "tmp-promise": "^3.0.3",
     "typescript": "^5.9.2",
-    "typescript-eslint": "^8.42.0"
+    "typescript-eslint": "^8.42.0",
+    "vitest": "^3.2.4"
   },
   "scripts": {
     "build": "ncc build src/index.ts -o dist -m",
-    "test:publish": "npm run build && node scripts/test-publish.js",
     "create": "node dist/index.js",
+    "test:ci": "npm run clean && vitest run --project unit --project integration",
+    "test:integration": "npm run clean && vitest run --project integration",
+    "test:publish": "npm run clean && vitest run --project publish",
+    "clean": "rm -rf __tests__/tmp",
     "format": "prettier --write .",
-    "format-check": "prettier --check .",
+    "format:check": "prettier --check .",
     "lint": "eslint .",
-    "lint:fix": "eslint . --fix"
+    "lint:fix": "eslint . --fix",
+    "semantic-release": "semantic-release"
   },
   "files": [
     "dist",
-    "template"
+    "index.js",
+    "template/_gitignore",
+    "template/.prettierignore",
+    "template/eslint.config.js",
+    "template/index.html",
+    "template/package.json",
+    "template/prettier.config.js",
+    "template/public",
+    "template/README.md",
+    "template/src",
+    "template/tailwind.config.js",
+    "template/tsconfig.app.json",
+    "template/tsconfig.json",
+    "template/tsconfig.node.json",
+    "template/vite.config.ts",
+    "README.md"
   ],
   "lint-staged": {
     "*.{js,ts}": [
@@ -53,18 +83,16 @@
     ],
     "!(*.{js,ts})": "prettier --write --ignore-unknown"
   },
-  "main": "index.js",
   "directories": {
     "test": "test"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tim-ming/npx.git"
+    "url": "git+https://github.com/tim-ming/create-react-creative.git"
   },
   "keywords": [],
-  "author": "tim-ming",
   "bugs": {
-    "url": "https://github.com/tim-ming/npx/issues"
+    "url": "https://github.com/tim-ming/create-react-creative/issues"
   },
-  "homepage": "https://github.com/tim-ming/npx#readme"
+  "homepage": "https://github.com/tim-ming/create-react-creative#readme"
 }
