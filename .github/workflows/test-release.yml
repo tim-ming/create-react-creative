@@ -66,5 +66,19 @@ jobs:
         env:
           npm_config_registry: http://localhost:4873
 
-      - name: Try semantic release
-        run: npx semantic-release --dry-run
+  semantic-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # semantic-release needs full history
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+
+      - run: npm ci
+      - run: npx semantic-release --dry-run
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
