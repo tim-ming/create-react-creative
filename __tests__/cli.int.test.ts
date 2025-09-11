@@ -7,4 +7,4 @@ const toIndexJs = path.resolve(projectRoot, 'index.js');
 const indexJs = path.join(path.resolve(tmpDir, toIndexJs), '..');
 const cmd = `node ${indexJs}`;
 
-cliTests(cmd, 'cli-int');
+cliTests(cmd, 'cli-int', true);

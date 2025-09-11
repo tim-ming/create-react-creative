@@ -13,7 +13,7 @@ test('test registry is set correctly', () => {
   expect(stdout.trim()).toBe('http://localhost:4873');
 });
 
-cliTests('npm create react-creative --', 'publish-test');
+cliTests('npm create react-creative --', 'publish-test', false);
 
 const tmpdirTest = tmpdirTestWithPrefix('publish-test');
 tmpdirTest('assert popular template', ({ dir }) => {

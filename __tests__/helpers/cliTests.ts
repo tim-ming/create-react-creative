@@ -4,8 +4,9 @@ import fs from 'node:fs';
 import { execaCommandSync } from 'execa';
 import { projectRoot, tmpdirTestWithPrefix } from './utils';
 import { createNonEmptyDir } from './utils';
+import ignore from 'ignore';
 
-export function cliTests(cmd: string, tmpDirName: string) {
+export function cliTests(cmd: string, tmpDirName: string, local: boolean) {
   // running it this way to ensure subfolder can be tested correctly,
   // but adds alot of complexity to the paths, is it even worth it??
   const rootDir = projectRoot;
@@ -13,11 +14,12 @@ export function cliTests(cmd: string, tmpDirName: string) {
   const templatePath = path.join(rootDir, 'template');
 
   // we need to do this because of how the repo develops on the template directly
-  const npmignore = fs.readFileSync(path.join(templatePath, '.npmignore'), 'utf-8');
+  const ignorePath = fs.readFileSync(path.join(templatePath, local ? '_gitignore' : '.npmignore'), 'utf-8');
+  const ig = ignore().add(ignorePath.split('\n'));
   const templateFiles = fs
     .readdirSync(templatePath)
     .map((file) => (file === '_gitignore' ? '.gitignore' : file))
-    .filter((file) => !npmignore.includes(file))
+    .filter((file) => !ig.ignores(file))
     .filter((file) => !['package-lock.json', 'pnpm-lock.yaml', 'yarn.lock', 'bun.lockb'].includes(file))
     .sort();
 
