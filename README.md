@@ -1,46 +1,77 @@
 # 🚀 React Creative Starter
 
-An **interactive wizard** to scaffold a creative Vite + React app with modern tools:  
-Tailwind, path aliases, SVG imports, animations, 3D, and creative utilities.
+[![npm version](https://img.shields.io/npm/v/create-react-creative?color=brightgreen&logo=npm)](https://www.npmjs.com/package/create-react-creative)
+[![CI](https://github.com/tim-ming/create-react-creative/actions/workflows/pr.yml/badge.svg)](https://github.com/tim-ming/create-react-creative/actions/workflows/pr.yml)
+[![License](https://img.shields.io/github/license/tim-ming/create-react-creative?color=blue)](LICENSE)
+[![npm downloads](https://img.shields.io/npm/dm/create-react-creative.svg)](https://www.npmjs.com/package/create-react-creative)
+[![semantic-release: angular](https://img.shields.io/badge/semantic--release-angular-e10079?logo=semantic-release)](https://github.com/semantic-release/semantic-release)
 
-<br>
+An **interactive wizard** to scaffold a modern, creative **Vite + React** app.  
+Choose Tailwind, animations, 3D, state management, and other creative tools — all in one command.
+
+```bash
+npm create react-creative
+```
+
+## ✨ Features at a Glance
+
+- ⚡ Fast Vite + React + TypeScript setup
+- 🎨 Tailwind CSS styling out of the box
+- 📂 Path alias (@ → src/) via vite-tsconfig-paths
+- 🖼️ Import SVGs as React components with vite-plugin-svgr
+- 🔌 Optional add-ons: animations, 3D, creative utilities, and state managers
 
 ## 📦 Stack
 
-**Default Setup**
+### Default Setup
 
-- [Vite](https://vitejs.dev/) + [React](https://react.dev/) (Builds upon `npx create vite@latest --template react-ts`)
-- [Tailwind CSS](https://tailwindcss.com/)
-- [vite-tsconfig-paths](https://github.com/aleclarson/vite-tsconfig-paths) (Path alias `@` → `src/`)
-- [vite-plugin-svgr](https://react-svgr.com/docs/vite/) (SVG component imports)
+- Vite + React (extends `npx create vite@latest --template react-ts`)
+- Tailwind CSS
+- vite-tsconfig-paths
+- vite-plugin-svgr
 
-**Optional Add-ons**
+### Optional Add-ons
 
-- 🎞️ **Animations**
-  - [GSAP](https://greensock.com/gsap/)
-  - [Framer Motion](https://www.framer.com/motion/)
-  - [react-spring](https://react-spring.dev/)
+#### 🎞️ Animations
 
-- 🗂️ **State Management**
-  - [Zustand](https://github.com/pmndrs/zustand)
-  - [Valtio](https://github.com/pmndrs/valtio)
-  - [Jotai](https://jotai.org/)
-  - [Redux Toolkit](https://redux-toolkit.js.org/)
+- GSAP
+- Framer Motion
+- react-spring
 
-- 🌐 **3D**
-  - [React Three Fiber (r3f) + Drei](https://docs.pmnd.rs/react-three-fiber/getting-started/introduction)
-    - [@react-three-postprocessing](https://github.com/pmndrs/react-three-postprocessing)
-    - [leva](https://github.com/pmndrs/leva)
-  - [Three.js](https://threejs.org/)
+#### 🗂️ State Management
 
-- 🎨 **Creative Tools**
-  - [Lenis](https://lenis.studiofreight.com/) (smooth scrolling)
-  - [use-gesture](https://use-gesture.netlify.app/)
+- Zustand
+- Valtio
+- Jotai
+- Redux Toolkit
 
-<br>
+#### 🌐 3D
 
-## ⚡ Usage
+- React Three Fiber (r3f) + Drei
+- @react-three-postprocessing
+- leva
+- Three.js
 
-```bash
-npx create-creative-app
-```
+#### 🎨 Creative Tools
+
+- Lenis (smooth scrolling)
+- use-gesture
+
+## ⚡ Getting Started
+
+1. **Scaffold a new project**
+
+   ```bash
+   npm create react-creative
+   ```
+
+2. **Follow the wizard prompts** to pick your stack and add-ons.
+
+3. **Install dependencies & run the dev server**
+   ```bash
+   cd my-app
+   npm install
+   npm run dev
+   ```
+
+That's it — you'll have a modern React + Vite app with all your chosen creative tools ready to go.
