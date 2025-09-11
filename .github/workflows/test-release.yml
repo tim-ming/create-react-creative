@@ -1,8 +1,8 @@
-name: Test npm publish (Verdaccio)
+name: Test npm publish (Verdaccio) and semantic release
 
 on:
   pull_request:
-    branches: [main]
+    branches: [next, main]
   workflow_dispatch:
 
 jobs:
