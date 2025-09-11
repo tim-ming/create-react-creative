@@ -5,6 +5,7 @@ updates:
     directory: / # Location of package.json
     schedule:
       interval: monthly
+    target-branch: dev
     commit-message:
       prefix: 'chore(deps):'
 
@@ -13,6 +14,7 @@ updates:
     directory: / # Root of the repo
     schedule:
       interval: monthly
+    target-branch: dev
     commit-message:
       prefix: 'chore(ci):'
 
@@ -21,5 +23,6 @@ updates:
     directory: /template/
     schedule:
       interval: weekly
+    target-branch: dev
     commit-message:
       prefix: 'chore(deps-template):'
