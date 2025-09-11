@@ -1,13 +1,13 @@
 name: Test npm publish (Verdaccio)
 
 on:
-  push:
-    branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   test-publish:
+    timeout-minutes: 30
     runs-on: ubuntu-latest
 
     services:
@@ -40,6 +40,9 @@ jobs:
       - name: Build project
         run: npm run build --if-present
 
+      - name: Dry-run publish to npm.js registry
+        run: npm publish --dry-run
+
       - name: Login to Verdaccio
         run: |
           npx npm-cli-login \
@@ -48,14 +51,22 @@ jobs:
             -e test@domain.test \
             -r http://localhost:4873
 
-      - name: Publish to Verdaccio
-        run: npm publish --registry http://localhost:4873
+      - name: Publish to Verdaccio registry
+        run: npm publish
+        env:
+          npm_config_registry: http://localhost:4873
 
       - name: Verify package metadata
-        run: npm info ${{ github.event.repository.name }} --json --registry http://localhost:4873
+        run: npm info ${{ github.event.repository.name }} --json
+        env:
+          npm_config_registry: http://localhost:4873
 
       - name: Install globally from Verdaccio
-        run: npm install -g ${{ github.event.repository.name }} --registry http://localhost:4873
+        run: npm install -g ${{ github.event.repository.name }}
+        env:
+          npm_config_registry: http://localhost:4873
 
-      - name: Run integration tests
-        run: node test.js
+      - name: Run publish tests
+        run: npm run test:publish
+        env:
+          npm_config_registry: http://localhost:4873

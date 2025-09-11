@@ -2,13 +2,23 @@ name: Lint and Format
 
 on:
   push:
-    branches: ['*']
+    branches: [dev, main]
+    paths-ignore: [README.md, LICENSE, 'docs/**']
   pull_request:
     branches: [main]
+    paths-ignore: [README.md, LICENSE, 'docs/**']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lint-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   lint-and-format:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - uses: actions/checkout@v4

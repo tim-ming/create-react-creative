@@ -5,6 +5,13 @@ on:
     - cron: '0 2 * * *' # run daily at 2am
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: sync-engines-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   UPDATE_BRANCH: update-engines-node
   ACTOR_NAME: ${{ github.actor }}
@@ -12,7 +19,10 @@ env:
 
 jobs:
   sync:
+    # only run on dev branch
+    if: github.ref == 'refs/heads/dev'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: write
       pull-requests: write

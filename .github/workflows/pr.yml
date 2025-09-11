@@ -3,14 +3,10 @@ name: PR
 on:
   pull_request:
     branches: [main]
-    paths-ignore:
-      - 'README.md'
-      - '.github/**'
-  push:
-    branches-ignore: [main]
-    paths-ignore:
-      - 'README.md'
-      - '.github/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 concurrency:
   group: pr-${{ github.workflow }}-${{ github.ref }}
@@ -19,6 +15,7 @@ concurrency:
 jobs:
   get_node_versions:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     outputs:
       node_versions: ${{ steps.parse.outputs.node_versions }}
     permissions:
@@ -64,7 +61,10 @@ jobs:
   test:
     runs-on: ubuntu-latest
     needs: get_node_versions
+    timeout-minutes: 30
     strategy:
+      fail-fast: true
+      max-parallel: 2
       matrix:
         node-version: ${{ fromJSON(needs.get_node_versions.outputs.node_versions) }}
         include:
@@ -82,28 +82,4 @@ jobs:
           cache-dependency-path: package-lock.json
       - run: npm ci --no-audit --no-fund --prefer-offline
       - run: npm run build
-      - run: npm test
-
-  publish-test:
-    runs-on: ubuntu-latest
-    needs: test
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: lts/*
-
-      - run: npm ci --no-audit --no-fund --prefer-offline
-      - run: npm run build
-      - run: npm publish --dry-run
-
-  # publish:
-  #   runs-on: ubuntu-latest
-  #   needs: publish-test
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: actions/setup-node@v4
-  #       with:
-  #         node-version: lts/*
-  #     - run: npm ci --no-audit --no-fund --prefer-offline
-  #     - run: npm publish
+      - run: npm run test:ci
