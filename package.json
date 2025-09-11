@@ -73,7 +73,8 @@
     "template/tsconfig.app.json",
     "template/tsconfig.json",
     "template/tsconfig.node.json",
-    "template/vite.config.ts"
+    "template/vite.config.ts",
+    "README.md"
   ],
   "lint-staged": {
     "*.{js,ts}": [
