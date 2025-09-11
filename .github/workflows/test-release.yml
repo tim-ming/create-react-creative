@@ -15,12 +15,6 @@ jobs:
         image: verdaccio/verdaccio:6
         ports:
           - 4873:4873
-        options: >-
-          --health-cmd="curl -f http://127.0.0.1:4873 || exit 1"
-          --health-interval=5s
-          --health-timeout=2s
-          --health-retries=20
-          --mount type=volume,destination=/verdaccio/storage
 
     strategy:
       matrix:
