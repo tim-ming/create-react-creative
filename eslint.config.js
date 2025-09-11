@@ -13,7 +13,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 export default defineConfig([
   globalIgnores(['dist']),
   {
-    files: ['src/**/*.{ts,tsx,js,jsx}', '*.js'],
+    files: ['src/**/*.{ts,tsx,js,jsx}', '*.js', '__tests__/**/*.ts'],
     plugins: { js, prettier },
     extends: ['js/recommended', tseslint.configs.recommended, prettierConfig],
     languageOptions: {
