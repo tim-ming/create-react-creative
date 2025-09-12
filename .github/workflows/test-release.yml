@@ -3,6 +3,7 @@ name: Test npm publish (Verdaccio) and semantic release
 on:
   pull_request:
     branches: [next, main]
+    paths-ignore: [README.md, LICENSE, 'docs/**', '.github/**']
   workflow_dispatch:
 
 jobs:
