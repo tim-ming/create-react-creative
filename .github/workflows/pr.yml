@@ -109,8 +109,6 @@ jobs:
         image: verdaccio/verdaccio:6
         ports:
           - 4873:4873
-        options: >-
-          --mount type=tmpfs,destination=/verdaccio/storage
 
     strategy:
       matrix:
