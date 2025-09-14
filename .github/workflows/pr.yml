@@ -109,6 +109,8 @@ jobs:
         image: verdaccio/verdaccio:6
         ports:
           - 4873:4873
+        options: >-
+          --mount type=tmpfs,destination=/verdaccio/storage
 
     strategy:
       matrix:
@@ -131,6 +133,11 @@ jobs:
 
       - name: Dry-run publish to npm.js registry
         run: npm publish --dry-run
+
+      - name: Bump unique prerelease version
+        run: |
+          npm version prerelease --preid=ci.$GITHUB_RUN_ID --no-git-tag-version
+          cat package.json | jq '.version'
 
       - name: Login to Verdaccio
         run: |
