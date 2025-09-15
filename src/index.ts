@@ -23,6 +23,7 @@ import traverseModule from '@babel/traverse';
 import generateModule from '@babel/generator';
 import * as babelTypes from '@babel/types';
 import ignore from 'ignore';
+import { generateReadme } from './lib/readme.js';
 
 const traverse = traverseModule.default ?? traverseModule;
 const generate = generateModule.default ?? generateModule;
@@ -290,6 +291,13 @@ function scaffoldTemplateFiles(projectRoot: string, state: WizardState) {
     if (!pkg.demo) continue;
     writeDir(path.join(TEMPLATE_ROOT, SCAFFOLD_RELATIVE_ROOT, pkg.demo.source), path.join(projectRoot, 'src'), '');
   }
+
+  // overwrite README with dynamic content
+  const readme = generateReadme(state.packageName || state.targetDir, state.libraries, {
+    install: getPackageManager(process.env.npm_config_user_agent).commands.install,
+    run: getPackageManager(process.env.npm_config_user_agent).commands.run,
+  });
+  writeFile(TEMPLATE_ROOT, projectRoot, 'README.md', readme + '\n');
 }
 
 function setupAppTsxAST(projectRoot: string, state: WizardState) {

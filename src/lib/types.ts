@@ -4,6 +4,7 @@ import type { PARENT_WRAPPERS } from './constants.js';
 interface PackageOption {
   name: string;
   packages: string[];
+  docs?: string;
   cli: {
     color: typeof ChalkInstance;
     displayName: string;

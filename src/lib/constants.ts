@@ -67,6 +67,7 @@ const ANIMATIONS: ReadonlyArray<Readonly<PackageOption>> = [
   {
     name: 'gsap',
     packages: ['gsap', '@gsap/react'],
+    docs: 'https://gsap.com',
     cli: {
       displayName: 'GSAP',
       description: 'GreenSock Animation Platform',
@@ -82,6 +83,7 @@ const ANIMATIONS: ReadonlyArray<Readonly<PackageOption>> = [
   {
     name: 'motion',
     packages: ['motion'],
+    docs: 'https://motion.dev/',
     cli: {
       displayName: 'motion (framer-motion)',
       description: 'A production-grade animation library for React, JavaScript, and Vue.',
@@ -97,6 +99,7 @@ const ANIMATIONS: ReadonlyArray<Readonly<PackageOption>> = [
   {
     name: 'react-spring',
     packages: ['@react-spring/web'],
+    docs: 'https://react-spring.dev/',
     cli: {
       displayName: 'react-spring',
       description: 'Open-source spring-physics first animation library',
@@ -117,6 +120,7 @@ const STATE_MANAGEMENTS: ReadonlyArray<Readonly<PackageOption>> = [
   {
     name: 'zustand',
     packages: ['zustand'],
+    docs: 'https://zustand-demo.pmnd.rs',
     cli: {
       displayName: 'Zustand',
       description: 'zustand',
@@ -132,6 +136,7 @@ const STATE_MANAGEMENTS: ReadonlyArray<Readonly<PackageOption>> = [
   {
     name: 'jotai',
     packages: ['jotai'],
+    docs: 'https://jotai.org/',
     cli: {
       displayName: 'Jotai',
       description: 'jotai',
@@ -147,6 +152,7 @@ const STATE_MANAGEMENTS: ReadonlyArray<Readonly<PackageOption>> = [
   {
     name: 'valtio',
     packages: ['valtio'],
+    docs: 'https://valtio.pmnd.rs/',
     cli: {
       displayName: 'Valtio',
       description: 'valtio',
@@ -162,6 +168,7 @@ const STATE_MANAGEMENTS: ReadonlyArray<Readonly<PackageOption>> = [
   {
     name: 'redux',
     packages: ['redux'],
+    docs: 'https://redux-toolkit.js.org/',
     cli: {
       displayName: 'Redux Toolkit',
       description: 'redux',
@@ -182,6 +189,7 @@ const THREES: ReadonlyArray<Readonly<PackageOption>> = [
   {
     name: 'three',
     packages: ['three'],
+    docs: 'https://threejs.org/',
     cli: {
       displayName: 'Vanilla three.js',
       description: 'Plain three.js',
@@ -197,6 +205,7 @@ const THREES: ReadonlyArray<Readonly<PackageOption>> = [
   {
     name: 'react-three-fiber',
     packages: ['three', '@types/three', '@react-three/fiber', '@react-three/drei'],
+    docs: 'https://docs.pmnd.rs/react-three-fiber/getting-started/introduction',
     cli: {
       displayName: 'react-three-fiber',
       description: 'React Three Fiber',
@@ -216,6 +225,7 @@ const REACT_THREES: ReadonlyArray<Readonly<PackageOption>> = [
   {
     name: 'react-three-postprocessing',
     packages: ['@react-three/postprocessing'],
+    docs: 'https://react-postprocessing.docs.pmnd.rs/introduction',
     cli: {
       displayName: 'react-three-postprocessing',
       description: 'Postprocessing effects for R3F',
@@ -226,6 +236,7 @@ const REACT_THREES: ReadonlyArray<Readonly<PackageOption>> = [
   {
     name: 'leva',
     packages: ['leva'],
+    docs: 'https://github.com/pmndrs/leva',
     cli: {
       displayName: 'leva',
       description: 'GUI controls for React',
@@ -240,6 +251,7 @@ const CREATIVE: ReadonlyArray<Readonly<PackageOption>> = [
   {
     name: 'lenis',
     packages: ['lenis'],
+    docs: 'https://lenis.darkroom.engineering',
     cli: {
       displayName: 'lenis',
       description: 'Smooth scroll library',
@@ -255,6 +267,7 @@ const CREATIVE: ReadonlyArray<Readonly<PackageOption>> = [
   {
     name: '@use-gesture/react',
     packages: ['@use-gesture/react'],
+    docs: 'https://use-gesture.netlify.app/',
     cli: {
       displayName: '@use-gesture/react',
       description: "The only gesture lib you'll need",
