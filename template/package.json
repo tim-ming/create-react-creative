@@ -27,8 +27,6 @@
     "tailwindcss": "^4.1.12",
     "three": "^0.180.0",
     "valtio": "^2.1.7",
-    "vite-plugin-svgr": "^4.5.0",
-    "vite-tsconfig-paths": "^5.1.4",
     "zustand": "^5.0.8"
   },
   "devDependencies": {
@@ -43,6 +41,8 @@
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.39.1",
     "prettier": "^3.6.2",
-    "vite": "^7.1.2"
+    "vite": "^7.1.2",
+    "vite-plugin-svgr": "^4.5.0",
+    "vite-tsconfig-paths": "^5.1.4"
   }
 }
