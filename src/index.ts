@@ -1,5 +1,5 @@
 import path from 'node:path';
-import fs, { emptyDir } from 'fs-extra';
+import fs, { emptyDirSync } from 'fs-extra';
 import process from 'node:process';
 import * as p from '@clack/prompts';
 import { LIBRARIES, NONE, TEMPLATES, HELP_MESSAGE, PARENT_WRAPPERS, RENAME_FILES } from './lib/constants.js';
@@ -103,7 +103,7 @@ async function promptState(): Promise<WizardState> {
     if (p.isCancel(overwrite)) return cancel();
     switch (overwrite) {
       case 'yes':
-        emptyDir(targetDir);
+        emptyDirSync(targetDir);
         break;
       case 'no':
         cancel();
