@@ -39,10 +39,10 @@ describe('helpers/index', () => {
   });
 
   it('parseArgv parses dir, help, and template flags', () => {
-    expect(parseArgv(['my-dir', '--template', 'popular'])).toEqual({
+    expect(parseArgv(['my-dir', '--template', 'rec'])).toEqual({
       dir: 'my-dir',
       help: false,
-      template: 'popular',
+      template: 'rec',
     });
 
     expect(parseArgv(['-h'])).toEqual({ dir: undefined, help: true, template: undefined });
