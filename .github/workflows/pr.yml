@@ -72,6 +72,7 @@ jobs:
           echo "node_versions=$node_versions" >> $GITHUB_OUTPUT
 
   test-integration:
+    name: test-integration (Node ${{ matrix.node-version }} on ${{ matrix.os || 'ubuntu' }})
     runs-on: ubuntu-latest
     needs: [changes, get_node_versions]
     if: needs.changes.outputs.run == 'true' || github.event_name == 'workflow_dispatch'
@@ -99,6 +100,7 @@ jobs:
       - run: npm run test:ci
 
   test-publish:
+    name: test-publish (Node ${{ matrix.node-version }})
     timeout-minutes: 30
     runs-on: ubuntu-latest
     needs: [changes, get_node_versions]
