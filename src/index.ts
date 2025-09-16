@@ -498,7 +498,7 @@ function setupMainTsx(projectRoot: string, state: WizardState) {
     babelTypes.stringLiteral('react-redux')
   );
   const storeImport = babelTypes.importDeclaration(
-    [babelTypes.importSpecifier(babelTypes.identifier('rtkStore'), babelTypes.identifier('rtkStore'))],
+    [babelTypes.importSpecifier(babelTypes.identifier('store'), babelTypes.identifier('store'))],
     babelTypes.stringLiteral('@/stores/state')
   );
 
@@ -513,7 +513,7 @@ function setupMainTsx(projectRoot: string, state: WizardState) {
     },
   });
 
-  // Wrap <App /> with <Provider store={rtkStore}>
+  // Wrap <App /> with <Provider store={store}>
   traverse(ast, {
     JSXElement(path) {
       const name = path.node.openingElement.name;
@@ -532,7 +532,7 @@ function setupMainTsx(projectRoot: string, state: WizardState) {
             const providerOpen = babelTypes.jsxOpeningElement(babelTypes.jsxIdentifier('Provider'), [
               babelTypes.jsxAttribute(
                 babelTypes.jsxIdentifier('store'),
-                babelTypes.jsxExpressionContainer(babelTypes.identifier('rtkStore'))
+                babelTypes.jsxExpressionContainer(babelTypes.identifier('store'))
               ),
             ]);
             const providerClose = babelTypes.jsxClosingElement(babelTypes.jsxIdentifier('Provider'));
