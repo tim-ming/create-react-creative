@@ -10,6 +10,7 @@ Note: The project generator overwrites this README with a customized version tha
 - Tailwind CSS preconfigured
 - SVGR for importing SVGs as React components
 - TSConfig paths alias (`@/*`)
+- Official Tailwind Prettier Plugin
 
 ## Getting Started
 
@@ -26,3 +27,4 @@ npm run dev
 - Tailwind CSS: https://tailwindcss.com/
 - SVGR (Vite): https://github.com/pd4d10/vite-plugin-svgr
 - TSConfig Paths (Vite): https://github.com/aleclarson/vite-tsconfig-paths
+- prettier-plugin-tailwindcss https://github.com/tailwindlabs/prettier-plugin-tailwindcss

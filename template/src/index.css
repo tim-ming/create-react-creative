@@ -33,4 +33,10 @@
   - Reusable UI components.
   - Improve code readability and maintainability.
   */
+  .counter-btn {
+    @apply h-12 w-12 cursor-pointer rounded bg-neutral-300/50 text-black backdrop-blur-sm transition hover:bg-neutral-100/80;
+  }
+  .stack-logo {
+    @apply h-16 w-16 transition duration-300 md:h-24 md:w-24;
+  }
 }
