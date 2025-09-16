@@ -85,9 +85,9 @@ jobs:
         include:
           # Active LTS + other OS
           - os: macos-latest
-            node_version: 22
+            node-version: 22
           - os: windows-latest
-            node_version: 22
+            node-version: 22
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -185,3 +185,24 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  check-all:
+    name: ✅ All matrix jobs passed
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - test-integration
+      - test-publish
+      - test-semantic-release
+    steps:
+      - name: Check job results
+        run: |
+          for job in test-integration test-publish test-semantic-release; do
+            result="${{ needs[job].result }}"
+            echo "$job: $result"
+            if [ "$result" != "success" ]; then
+              echo "❌ $job failed"
+              exit 1
+            fi
+          done
+          echo "✅ All required jobs succeeded"
