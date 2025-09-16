@@ -187,22 +187,25 @@ jobs:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   check-all:
-    name: ✅ All matrix jobs passed
+    name: All matrix jobs passed
     runs-on: ubuntu-latest
-    if: always()
+    if: ${{ always() }}
     needs:
       - test-integration
       - test-publish
       - test-semantic-release
     steps:
-      - name: Check job results
+      - name: Show job results (debug)
         run: |
-          for job in test-integration test-publish test-semantic-release; do
-            result="${{ needs[job].result }}"
-            echo "$job: $result"
-            if [ "$result" != "success" ]; then
-              echo "❌ $job failed"
-              exit 1
-            fi
-          done
-          echo "✅ All required jobs succeeded"
+          echo 'Needs summary:'
+          echo '${{ toJSON(needs) }}' | jq .
+
+      - name: Fail if any job failed/cancelled
+        if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped') }}
+        run: |
+          echo "❌ At least one job failed or was cancelled."
+          echo '${{ toJSON(needs) }}' | jq '.[] | {id: .id, result: .result}'
+          exit 1
+
+      - name: All good
+        run: echo "✅ All required jobs succeeded"
