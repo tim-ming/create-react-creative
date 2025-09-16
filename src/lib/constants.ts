@@ -4,6 +4,8 @@ import type { PackageManager, PackageOption, Template } from './types.js';
 const PARENT_WRAPPERS = {
   GRID: 'Grid',
   EFFECTS: 'Effects',
+  BACKGROUND: 'Background',
+  HEADER: 'Header',
 } as const;
 
 const NONE: Readonly<PackageOption> = {
@@ -63,10 +65,25 @@ const PACKAGE_MANAGERS = {
 
 // ---------------- Animations ----------------
 const ANIMATIONS: ReadonlyArray<Readonly<PackageOption>> = [
-  NONE,
+  {
+    name: 'none',
+    packages: [],
+    cli: {
+      displayName: 'none',
+      description: '',
+      hint: '',
+      color: chalk.gray,
+    },
+    demo: {
+      insertion: PARENT_WRAPPERS.HEADER,
+      source: 'animation/default',
+      destination: 'components',
+    },
+  },
   {
     name: 'gsap',
     packages: ['gsap', '@gsap/react'],
+    docs: 'https://gsap.com',
     cli: {
       displayName: 'GSAP',
       description: 'GreenSock Animation Platform',
@@ -74,7 +91,7 @@ const ANIMATIONS: ReadonlyArray<Readonly<PackageOption>> = [
       color: chalk.green,
     },
     demo: {
-      insertion: PARENT_WRAPPERS.GRID,
+      insertion: PARENT_WRAPPERS.HEADER,
       source: 'animation/gsap',
       destination: 'components',
     },
@@ -82,6 +99,7 @@ const ANIMATIONS: ReadonlyArray<Readonly<PackageOption>> = [
   {
     name: 'motion',
     packages: ['motion'],
+    docs: 'https://motion.dev/',
     cli: {
       displayName: 'motion (framer-motion)',
       description: 'A production-grade animation library for React, JavaScript, and Vue.',
@@ -89,7 +107,7 @@ const ANIMATIONS: ReadonlyArray<Readonly<PackageOption>> = [
       color: chalk.blue,
     },
     demo: {
-      insertion: PARENT_WRAPPERS.GRID,
+      insertion: PARENT_WRAPPERS.HEADER,
       source: 'animation/motion',
       destination: 'components',
     },
@@ -97,6 +115,7 @@ const ANIMATIONS: ReadonlyArray<Readonly<PackageOption>> = [
   {
     name: 'react-spring',
     packages: ['@react-spring/web'],
+    docs: 'https://react-spring.dev/',
     cli: {
       displayName: 'react-spring',
       description: 'Open-source spring-physics first animation library',
@@ -104,7 +123,7 @@ const ANIMATIONS: ReadonlyArray<Readonly<PackageOption>> = [
       color: chalk.magenta,
     },
     demo: {
-      insertion: PARENT_WRAPPERS.GRID,
+      insertion: PARENT_WRAPPERS.HEADER,
       source: 'animation/reactSpring',
       destination: 'components',
     },
@@ -113,10 +132,25 @@ const ANIMATIONS: ReadonlyArray<Readonly<PackageOption>> = [
 
 // ---------------- State Management ----------------
 const STATE_MANAGEMENTS: ReadonlyArray<Readonly<PackageOption>> = [
-  NONE,
+  {
+    name: 'none',
+    packages: [],
+    cli: {
+      displayName: 'none',
+      description: '',
+      hint: '',
+      color: chalk.gray,
+    },
+    demo: {
+      insertion: PARENT_WRAPPERS.GRID,
+      source: 'stateManagement/default',
+      destination: 'components',
+    },
+  },
   {
     name: 'zustand',
     packages: ['zustand'],
+    docs: 'https://zustand-demo.pmnd.rs',
     cli: {
       displayName: 'Zustand',
       description: 'zustand',
@@ -132,6 +166,7 @@ const STATE_MANAGEMENTS: ReadonlyArray<Readonly<PackageOption>> = [
   {
     name: 'jotai',
     packages: ['jotai'],
+    docs: 'https://jotai.org/',
     cli: {
       displayName: 'Jotai',
       description: 'jotai',
@@ -147,6 +182,7 @@ const STATE_MANAGEMENTS: ReadonlyArray<Readonly<PackageOption>> = [
   {
     name: 'valtio',
     packages: ['valtio'],
+    docs: 'https://valtio.pmnd.rs/',
     cli: {
       displayName: 'Valtio',
       description: 'valtio',
@@ -161,7 +197,8 @@ const STATE_MANAGEMENTS: ReadonlyArray<Readonly<PackageOption>> = [
   },
   {
     name: 'redux',
-    packages: ['redux'],
+    packages: ['@reduxjs/toolkit', 'react-redux'],
+    docs: 'https://redux-toolkit.js.org/',
     cli: {
       displayName: 'Redux Toolkit',
       description: 'redux',
@@ -182,14 +219,15 @@ const THREES: ReadonlyArray<Readonly<PackageOption>> = [
   {
     name: 'three',
     packages: ['three'],
+    docs: 'https://threejs.org/',
     cli: {
-      displayName: 'Vanilla three.js',
+      displayName: 'three.js',
       description: 'Plain three.js',
       hint: '',
       color: chalk.magenta,
     },
     demo: {
-      insertion: PARENT_WRAPPERS.GRID,
+      insertion: PARENT_WRAPPERS.BACKGROUND,
       source: 'three/vanillaThree',
       destination: 'components',
     },
@@ -197,6 +235,7 @@ const THREES: ReadonlyArray<Readonly<PackageOption>> = [
   {
     name: 'react-three-fiber',
     packages: ['three', '@types/three', '@react-three/fiber', '@react-three/drei'],
+    docs: 'https://docs.pmnd.rs/react-three-fiber/getting-started/introduction',
     cli: {
       displayName: 'react-three-fiber',
       description: 'React Three Fiber',
@@ -204,7 +243,7 @@ const THREES: ReadonlyArray<Readonly<PackageOption>> = [
       color: chalk.blue,
     },
     demo: {
-      insertion: PARENT_WRAPPERS.GRID,
+      insertion: PARENT_WRAPPERS.BACKGROUND,
       source: 'three/r3f',
       destination: 'components',
     },
@@ -216,6 +255,7 @@ const REACT_THREES: ReadonlyArray<Readonly<PackageOption>> = [
   {
     name: 'react-three-postprocessing',
     packages: ['@react-three/postprocessing'],
+    docs: 'https://react-postprocessing.docs.pmnd.rs/introduction',
     cli: {
       displayName: 'react-three-postprocessing',
       description: 'Postprocessing effects for R3F',
@@ -226,6 +266,7 @@ const REACT_THREES: ReadonlyArray<Readonly<PackageOption>> = [
   {
     name: 'leva',
     packages: ['leva'],
+    docs: 'https://github.com/pmndrs/leva',
     cli: {
       displayName: 'leva',
       description: 'GUI controls for React',
@@ -240,6 +281,7 @@ const CREATIVE: ReadonlyArray<Readonly<PackageOption>> = [
   {
     name: 'lenis',
     packages: ['lenis'],
+    docs: 'https://lenis.darkroom.engineering',
     cli: {
       displayName: 'lenis',
       description: 'Smooth scroll library',
@@ -255,8 +297,9 @@ const CREATIVE: ReadonlyArray<Readonly<PackageOption>> = [
   {
     name: '@use-gesture/react',
     packages: ['@use-gesture/react'],
+    docs: 'https://use-gesture.netlify.app/',
     cli: {
-      displayName: '@use-gesture/react',
+      displayName: 'use-gesture',
       description: "The only gesture lib you'll need",
       hint: '',
       color: chalk.green,
@@ -274,10 +317,10 @@ const LIBRARIES = {
 
 // ---------------- Templates ----------------
 const TEMPLATES = {
-  popular: {
+  rec: {
     cli: {
       color: chalk.blue,
-      displayName: 'popular',
+      displayName: 'rec',
     },
     libs: {
       animation: ANIMATIONS.find((a) => a.name === 'gsap')!,
@@ -285,6 +328,19 @@ const TEMPLATES = {
       three: THREES.find((t) => t.name === 'react-three-fiber')!,
       reactThree: REACT_THREES.filter(() => false),
       creative: CREATIVE.filter((c) => c.name === 'lenis'),
+    },
+  },
+  barebones: {
+    cli: {
+      color: chalk.blue,
+      displayName: 'barebones',
+    },
+    libs: {
+      animation: ANIMATIONS.find((a) => a.name === 'none')!,
+      stateManagement: STATE_MANAGEMENTS.find((s) => s.name === 'none')!,
+      three: THREES.find((t) => t.name === 'none')!,
+      reactThree: REACT_THREES.filter(() => false),
+      creative: CREATIVE.filter((c) => c.name === 'none'),
     },
   },
 } as const satisfies Template;

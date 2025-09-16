@@ -1,5 +1,5 @@
 import path from 'node:path';
-import fs, { emptyDir } from 'fs-extra';
+import fs, { emptyDirSync } from 'fs-extra';
 import process from 'node:process';
 import * as p from '@clack/prompts';
 import { LIBRARIES, NONE, TEMPLATES, HELP_MESSAGE, PARENT_WRAPPERS, RENAME_FILES } from './lib/constants.js';
@@ -23,6 +23,7 @@ import traverseModule from '@babel/traverse';
 import generateModule from '@babel/generator';
 import * as babelTypes from '@babel/types';
 import ignore from 'ignore';
+import { generateReadme } from './lib/readme.js';
 
 const traverse = traverseModule.default ?? traverseModule;
 const generate = generateModule.default ?? generateModule;
@@ -102,7 +103,7 @@ async function promptState(): Promise<WizardState> {
     if (p.isCancel(overwrite)) return cancel();
     switch (overwrite) {
       case 'yes':
-        emptyDir(targetDir);
+        emptyDirSync(targetDir);
         break;
       case 'no':
         cancel();
@@ -290,6 +291,13 @@ function scaffoldTemplateFiles(projectRoot: string, state: WizardState) {
     if (!pkg.demo) continue;
     writeDir(path.join(TEMPLATE_ROOT, SCAFFOLD_RELATIVE_ROOT, pkg.demo.source), path.join(projectRoot, 'src'), '');
   }
+
+  // overwrite README with dynamic content
+  const readme = generateReadme(state.packageName || state.targetDir, state.libraries, {
+    install: getPackageManager(process.env.npm_config_user_agent).commands.install,
+    run: getPackageManager(process.env.npm_config_user_agent).commands.run,
+  });
+  writeFile(TEMPLATE_ROOT, projectRoot, 'README.md', readme + '\n');
 }
 
 function setupAppTsxAST(projectRoot: string, state: WizardState) {
@@ -373,7 +381,7 @@ function setupAppTsxAST(projectRoot: string, state: WizardState) {
     },
   });
 
-  // Insert JSX children into Grid/Effects
+  // Insert JSX children into parent wrappers (see lib/constants.ts)
   traverse(ast, {
     JSXElement(path) {
       const name = path.node.openingElement.name;
@@ -388,6 +396,81 @@ function setupAppTsxAST(projectRoot: string, state: WizardState) {
   });
 
   // Generate code back
+  // Add extra <Docs /> with selected libraries, if any
+  try {
+    const extraLibs = flattenObjectValues(state.libraries)
+      .filter((l) => l && l.name !== 'none' && l.docs)
+      .map((l) => ({ name: l.cli.displayName, docs: l.docs! }));
+
+    if (extraLibs.length > 0) {
+      // Build: const extraDocs = useRef([{ name: 'Lib', url: 'https://...' }, ...]);
+      const items = extraLibs.map((l) =>
+        babelTypes.objectExpression([
+          babelTypes.objectProperty(babelTypes.identifier('name'), babelTypes.stringLiteral(l.name)),
+          babelTypes.objectProperty(babelTypes.identifier('url'), babelTypes.stringLiteral(l.docs)),
+        ])
+      );
+      const extraDecl = babelTypes.variableDeclaration('const', [
+        babelTypes.variableDeclarator(
+          babelTypes.identifier('extraDocs'),
+          babelTypes.callExpression(babelTypes.identifier('useRef'), [babelTypes.arrayExpression(items)])
+        ),
+      ]);
+
+      // Insert the variable declaration inside App() after defaultDocs
+      traverse(ast, {
+        FunctionDeclaration(path) {
+          if (babelTypes.isIdentifier(path.node.id, { name: 'App' })) {
+            const body = path.node.body.body;
+            const defaultIdx = body.findIndex(
+              (n) =>
+                babelTypes.isVariableDeclaration(n) &&
+                n.declarations.some(
+                  (d) => babelTypes.isIdentifier(d.id) && (d.id as babelTypes.Identifier).name === 'defaultDocs'
+                )
+            );
+            const insertAt = defaultIdx >= 0 ? defaultIdx + 1 : 0;
+            body.splice(insertAt, 0, extraDecl);
+          }
+        },
+      });
+
+      // Insert <Docs docs={extraDocs.current} /> after the existing <Docs docs={defaultDocs.current} />
+      let inserted = false;
+      traverse(ast, {
+        JSXElement(path) {
+          if (inserted) return;
+          const name = path.node.openingElement.name;
+          if (!babelTypes.isJSXIdentifier(name)) return;
+          if (name.name === 'Docs') {
+            const parent = path.parentPath;
+            if (
+              parent &&
+              (babelTypes.isJSXElement(parent.node) || babelTypes.isJSXFragment(parent.node)) &&
+              Array.isArray(parent.node.children)
+            ) {
+              const children = parent.node.children as babelTypes.JSXElement[];
+              const idx = children.indexOf(path.node);
+              const docsAttr = babelTypes.jsxAttribute(
+                babelTypes.jsxIdentifier('docs'),
+                babelTypes.jsxExpressionContainer(
+                  babelTypes.memberExpression(babelTypes.identifier('extraDocs'), babelTypes.identifier('current'))
+                )
+              );
+              const open = babelTypes.jsxOpeningElement(babelTypes.jsxIdentifier('Docs'), [docsAttr], true);
+              const docsEl = babelTypes.jsxElement(open, null, [], true);
+              children.splice(idx + 1, 0, docsEl);
+              inserted = true;
+            }
+          }
+        },
+      });
+    }
+  } catch (e) {
+    // Non-fatal: skip Docs augmentation if structure differs
+    console.error(e);
+  }
+
   const { code } = generate(ast, {
     retainLines: true,
     comments: true,
@@ -395,6 +478,79 @@ function setupAppTsxAST(projectRoot: string, state: WizardState) {
   });
 
   fs.writeFileSync(projectAppPath, code, 'utf8');
+}
+
+function setupMainTsx(projectRoot: string, state: WizardState) {
+  // Only needed for Redux Toolkit
+  if (state.libraries.stateManagement?.name !== 'redux') return;
+
+  const mainPath = path.join(projectRoot, 'src', 'main.tsx');
+  const content = fs.readFileSync(mainPath, 'utf8');
+
+  const ast = parse(content, {
+    sourceType: 'module',
+    plugins: ['typescript', 'jsx'],
+  });
+
+  // Insert imports for Provider and store
+  const providerImport = babelTypes.importDeclaration(
+    [babelTypes.importSpecifier(babelTypes.identifier('Provider'), babelTypes.identifier('Provider'))],
+    babelTypes.stringLiteral('react-redux')
+  );
+  const storeImport = babelTypes.importDeclaration(
+    [babelTypes.importSpecifier(babelTypes.identifier('rtkStore'), babelTypes.identifier('rtkStore'))],
+    babelTypes.stringLiteral('@/stores/state')
+  );
+
+  traverse(ast, {
+    Program(path) {
+      const body = path.node.body;
+      const firstNonImport = body.findIndex((n) => !babelTypes.isImportDeclaration(n));
+      const insertAt = firstNonImport === -1 ? body.length : firstNonImport;
+
+      body.splice(insertAt, 0, storeImport);
+      body.splice(insertAt, 0, providerImport);
+    },
+  });
+
+  // Wrap <App /> with <Provider store={rtkStore}>
+  traverse(ast, {
+    JSXElement(path) {
+      const name = path.node.openingElement.name;
+      if (!babelTypes.isJSXIdentifier(name)) return;
+
+      if (name.name === 'StrictMode') {
+        let wrapped = false;
+        path.node.children = path.node.children.map((child) => {
+          if (
+            !wrapped &&
+            babelTypes.isJSXElement(child) &&
+            babelTypes.isJSXIdentifier(child.openingElement.name) &&
+            child.openingElement.name.name === 'App'
+          ) {
+            wrapped = true;
+            const providerOpen = babelTypes.jsxOpeningElement(babelTypes.jsxIdentifier('Provider'), [
+              babelTypes.jsxAttribute(
+                babelTypes.jsxIdentifier('store'),
+                babelTypes.jsxExpressionContainer(babelTypes.identifier('rtkStore'))
+              ),
+            ]);
+            const providerClose = babelTypes.jsxClosingElement(babelTypes.jsxIdentifier('Provider'));
+            return babelTypes.jsxElement(providerOpen, providerClose, [child], false);
+          }
+          return child;
+        });
+      }
+    },
+  });
+
+  const { code } = generate(ast, {
+    retainLines: true,
+    comments: true,
+    concise: false,
+  });
+
+  fs.writeFileSync(mainPath, code, 'utf8');
 }
 
 async function main() {
@@ -409,6 +565,7 @@ async function main() {
   scaffoldTemplateFiles(projectRoot, state);
   // setupAppTsx(projectRoot, state);
   setupAppTsxAST(projectRoot, state);
+  setupMainTsx(projectRoot, state);
   p.log.success('Template files scaffolded!');
 
   p.outro(chalk.bold.green('✔ Project ready!'));
@@ -417,6 +574,8 @@ async function main() {
   console.log(`  1. cd ${cdProjectName}`);
   console.log('  2.', pm.commands.install + '; ' + pm.commands.run + ' format');
   console.log('  3.', pm.commands.run + ' dev');
+  console.log('\nOr copy & paste the following:');
+  console.log(`  cd ${cdProjectName}; ${pm.commands.install}; ${pm.commands.run} format; ${pm.commands.run} dev`);
 
   console.log('\nGet creative and happy building ✨\n');
 }
