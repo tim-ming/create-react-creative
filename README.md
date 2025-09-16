@@ -10,7 +10,7 @@ An **interactive wizard** to scaffold a modern, creative **Vite + React** app.
 Animations, state management, 3D and other creative tools.
 
 ```bash
-npm create react-creative
+npm create react-creative@latest
 ```
 
 ## ✨ Features at a Glance
