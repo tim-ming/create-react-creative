@@ -31,25 +31,22 @@ npm run test:publish   # runs Verdaccio publish tests (see CI)
 
 ### Local Development Workflow
 
-1. Make changes in `src/**` (CLI) and/or `template/**` (scaffold files).
+#### `src/**` (CLI)
+
+1. Make changes in `src/**` (CLI)
 2. Build the CLI: `npm run build`.
 3. Run locally in a test directory:
 
 ```bash
-# From repo root
-node index.js           # launches the CLI from dist/index.js
-
-# Or create into a temp folder
-TMP=$(mktemp -d) && (cd "$TMP" && node /path/to/repo/index.js)
+node index.js
 ```
 
-Tip: You can also install globally from a local tarball for end‑to‑end testing:
+#### `template/**` (scaffold template files)
 
-```bash
-npm pack                 # creates create-react-creative-*.tgz
-npm i -g ./create-react-creative-*.tgz
-create-react-creative    # runs the globally installed CLI
-```
+1. `npm run dev` to start the dev server.
+2. Leave the structure as-is, add any components from `template/src/demo` into `template/App.tsx`, refer to constants in `src/lib/constants.ts` as to which parent wrapper they belong.
+3. Update the components in `template/src/components`, and see the changes in your dev server.
+4. When commiting, ensure **only parent wrappers** are in `App.tsx`.
 
 ### Coding Style
 
@@ -103,14 +100,18 @@ Automated versioning, changelog, GitHub Releases, and npm publishing are handled
 
 ### Contributing
 
-- Use Conventional Commits: `feat:`, `fix:`, `docs:`, `refactor:`, `build:`, `test:`.
+- Use Conventional Commits: `feat:`, `fix:`, `docs:`, `refactor:`, `build:`, `test:`, `ci:`.
+
+### Limitations
+
+- Generated TSX is not prettified, and needs users to manually run `npm run format` initially to prettify it. This is because the CLI uses Babel to insert components into `App.tsx`, and Babel does not support Prettier.
 
 ### TODO:
 
-- [ ] Update badges on README
+- [x] Update badges on README
 - [ ] Update generated templates
 - [ ] Screenshot Banner
 - [ ] Stackblitz Template
-- [ ] Test CI pipeline
-- [ ] Test Publish pipeline
+- [x] Test CI pipeline
+- [x] Test Publish pipeline
 - [ ] So many more things to do, will update this section

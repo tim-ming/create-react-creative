@@ -24,7 +24,7 @@ tmpdirTest(
   async ({ dir }) => {
     const appRoot = path.resolve(dir, appName);
     // 1. Scaffold app
-    await execa('node', [path.relative(dir, toIndexJs), appName, '--template', 'popular'], {
+    await execa('node', [path.relative(dir, toIndexJs), appName, '--template', 'rec'], {
       cwd: dir,
       env: { FORCE_COLOR: '0', CI: 'true' },
       stdio: 'inherit',

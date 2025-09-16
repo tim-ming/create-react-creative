@@ -43,22 +43,41 @@ export function cliTests(cmd: string, tmpDirName: string, local: boolean) {
       expect(stdout).toContain(`Target directory "${projectName}" is not empty.`);
     });
 
-    tmpdirTest('scaffolds a project with the popular template', async ({ dir }) => {
-      const projectName = 'my-app';
-      const projectDir = path.resolve(dir, projectName);
+    tmpdirTest(
+      'scaffolds a project with the rec template',
+      async ({ dir }) => {
+        const projectName = 'my-app';
+        const projectDir = path.resolve(dir, projectName);
 
-      const { stdout } = execaCommandSync(`${cmd} ${projectName} --template popular`, { cwd: dir });
-      const generatedFiles = fs.readdirSync(projectDir).sort();
+        const { stdout } = execaCommandSync(`${cmd} ${projectName} --template rec`, { cwd: dir });
+        const generatedFiles = fs.readdirSync(projectDir).sort();
 
-      expect(stdout).toContain(`Scaffolding project in ${projectDir}`);
-      expect(generatedFiles).toEqual(templateFiles);
-    });
+        expect(stdout).toContain(`Scaffolding project in ${projectDir}`);
+        expect(generatedFiles).toEqual(templateFiles);
+      },
+      10_000
+    );
+
+    tmpdirTest(
+      'scaffolds a project with the barebones template',
+      async ({ dir }) => {
+        const projectName = 'my-app';
+        const projectDir = path.resolve(dir, projectName);
+
+        const { stdout } = execaCommandSync(`${cmd} ${projectName} --template barebones`, { cwd: dir });
+        const generatedFiles = fs.readdirSync(projectDir).sort();
+
+        expect(stdout).toContain(`Scaffolding project in ${projectDir}`);
+        expect(generatedFiles).toEqual(templateFiles);
+      },
+      10_000
+    );
 
     tmpdirTest('scaffolds into a subfolder', async ({ dir }) => {
       const projectName = 'subfolder/my-app';
       const projectDirWithSubfolder = path.resolve(dir, projectName);
 
-      const { stdout } = execaCommandSync(`${cmd} ${projectName} --template popular`, { cwd: dir });
+      const { stdout } = execaCommandSync(`${cmd} ${projectName} --template rec`, { cwd: dir });
       const generatedFiles = fs.readdirSync(projectDirWithSubfolder).sort();
 
       expect(stdout).toContain(`Scaffolding project in ${projectDirWithSubfolder}`);
@@ -69,7 +88,7 @@ export function cliTests(cmd: string, tmpDirName: string, local: boolean) {
       const projectName = 'my-app';
       const projectDir = path.resolve(dir, projectName);
 
-      const { stdout } = execaCommandSync(`${cmd} ${projectName} -t popular`, { cwd: dir });
+      const { stdout } = execaCommandSync(`${cmd} ${projectName} -t rec`, { cwd: dir });
       const generatedFiles = fs.readdirSync(projectDir).sort();
 
       expect(stdout).toContain(`Scaffolding project in ${projectDir}`);
