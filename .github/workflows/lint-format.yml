@@ -64,3 +64,19 @@ jobs:
 
       - name: Run ESLint
         run: npm run lint
+
+  test-passed:
+    if: (!cancelled() && !failure())
+    needs: lint-and-format
+    runs-on: ubuntu-latest
+    name: Lint & Format Check Passed or Skipped
+    steps:
+      - run: echo "Lint & Format Check Passed or Skipped"
+
+  test-failed:
+    if: (!cancelled() && failure())
+    needs: lint-and-format
+    runs-on: ubuntu-latest
+    name: Lint & Format Check Failed
+    steps:
+      - run: echo "Lint & Format Check Failed"
