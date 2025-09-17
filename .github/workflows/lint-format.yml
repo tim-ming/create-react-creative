@@ -69,14 +69,14 @@ jobs:
     if: (!cancelled() && !failure())
     needs: lint-and-format
     runs-on: ubuntu-latest
-    name: Build & Test Passed or Skipped
+    name: Lint & Format Check Passed or Skipped
     steps:
-      - run: echo "Build & Test Passed or Skipped"
+      - run: echo "Lint & Format Check Passed or Skipped"
 
   test-failed:
     if: (!cancelled() && failure())
     needs: lint-and-format
     runs-on: ubuntu-latest
-    name: Build & Test Failed
+    name: Lint & Format Check Failed
     steps:
-      - run: echo "Build & Test Failed"
+      - run: echo "Lint & Format Check Failed"
