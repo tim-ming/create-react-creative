@@ -22,6 +22,7 @@ jobs:
       - id: filter
         uses: dorny/paths-filter@v3
         with:
+          predicate-quantifier: 'every'
           filters: |
             run:
               - '**'
@@ -78,8 +79,7 @@ jobs:
     if: needs.changes.outputs.run == 'true' || github.event_name == 'workflow_dispatch'
     timeout-minutes: 30
     strategy:
-      fail-fast: true
-      max-parallel: 2
+      fail-fast: false
       matrix:
         node-version: ${{ fromJSON(needs.get_node_versions.outputs.node_versions) }}
         include:
@@ -104,7 +104,7 @@ jobs:
     timeout-minutes: 30
     runs-on: ubuntu-latest
     needs: [changes, get_node_versions]
-    if: (needs.changes.outputs.run == 'true' || github.event_name == 'workflow_dispatch') && github.actor != 'dependabot[bot]'
+    if: (needs.changes.outputs.run == 'true' || github.event_name == 'workflow_dispatch')
 
     services:
       verdaccio:
@@ -115,6 +115,7 @@ jobs:
     strategy:
       matrix:
         node-version: ${{ fromJSON(needs.get_node_versions.outputs.node_versions) }}
+      fail-fast: false
 
     steps:
       - uses: actions/checkout@v4
@@ -170,7 +171,7 @@ jobs:
   test-semantic-release:
     runs-on: ubuntu-latest
     needs: changes
-    if: (needs.changes.outputs.run == 'true' || github.event_name == 'workflow_dispatch') && github.actor != 'dependabot[bot]'
+    if: (needs.changes.outputs.run == 'true' || github.event_name == 'workflow_dispatch')
     steps:
       - uses: actions/checkout@v4
         with:
@@ -186,26 +187,18 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-  check-all:
-    name: All matrix jobs passed
+  test-passed:
+    if: (!cancelled() && !failure())
+    needs: [test-integration, test-publish, test-semantic-release]
     runs-on: ubuntu-latest
-    if: ${{ always() }}
-    needs:
-      - test-integration
-      - test-publish
-      - test-semantic-release
+    name: Build & Test Passed or Skipped
     steps:
-      - name: Show job results (debug)
-        run: |
-          echo 'Needs summary:'
-          echo '${{ toJSON(needs) }}' | jq .
+      - run: echo "Build & Test Passed or Skipped"
 
-      - name: Fail if any job failed/cancelled
-        if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped') }}
-        run: |
-          echo "❌ At least one job failed or was cancelled."
-          echo '${{ toJSON(needs) }}' | jq '.[] | {id: .id, result: .result}'
-          exit 1
-
-      - name: All good
-        run: echo "✅ All required jobs succeeded"
+  test-failed:
+    if: (!cancelled() && failure())
+    needs: [test-integration, test-publish, test-semantic-release]
+    runs-on: ubuntu-latest
+    name: Build & Test Failed
+    steps:
+      - run: echo "Build & Test Failed"
