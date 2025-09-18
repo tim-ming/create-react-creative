@@ -1,18 +1,5 @@
 version: 2
 updates:
-  # Keep npm dependencies up to date (root)
-  - package-ecosystem: npm
-    directory: /
-    schedule:
-      interval: monthly
-    target-branch: dev
-    commit-message:
-      prefix: 'chore(deps):'
-    groups:
-      all-npm:
-        patterns:
-          - '*' # group all npm deps into one PR
-
   # Keep GitHub Actions versions up to date
   - package-ecosystem: github-actions
     directory: /
