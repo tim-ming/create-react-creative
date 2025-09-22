@@ -15,7 +15,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 export default defineConfig([
   globalIgnores(['dist']),
   {
-    files: ['template/**/*.{ts,tsx,js}', '*.js', 'src/**/*.{ts,tsx,js}', '__tests__/**/*.{ts,tsx,js}'],
+    files: ['**/*.{ts,tsx,js}'],
     plugins: { prettier },
     extends: [
       js.configs.recommended,
