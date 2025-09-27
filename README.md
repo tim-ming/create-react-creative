@@ -58,6 +58,16 @@ npm create react-creative@latest
 - [Lenis](https://lenis.darkroom.engineering) (smooth scrolling)
 - [use-gesture](https://use-gesture.netlify.app)
 
+## Feature Requests
+
+If you got an idea to make this project better, or want a library included:
+
+Open a [new issue](https://github.com/tim-ming/create-react-creative/issues/new?labels=feat&template=feature_request.md) with the **Feature Request** template.
+
+## Bugs
+
+Open a [new issue](https://github.com/tim-ming/create-react-creative/issues/new?labels=bug&template=bug_report.md) with the **Bug Report** template.
+
 ---
 
 Still in early development, website coming soon.

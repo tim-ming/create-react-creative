@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img">
+  <title>use-gesture logo</title>
+  <rect width="64" height="64" rx="12" fill="#083344" />
+  <path
+    d="M24 28a8 8 0 0 1 16 0v4l4-2a4 4 0 0 1 4 4v10c0 5-3 8-8 8H28c-5 0-8-3-8-8V36a8 8 0 0 1 16 0v10"
+    fill="none"
+    stroke="#38d0d7"
+    stroke-width="5"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>
