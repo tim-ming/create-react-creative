@@ -7,7 +7,7 @@ import Lenis from '@/Lenis';
 
 function App() {
   return (
-    <div className="relative min-h-screen bg-slate-950 text-slate-100">
+    <div className="relative min-h-screen text-slate-100">
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:rounded-md focus:bg-blue-400 focus:px-4 focus:py-2 focus:text-slate-950 focus:shadow-lg"

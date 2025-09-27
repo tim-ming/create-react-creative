@@ -1,10 +1,8 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { Canvas, useFrame, useThree, type RootState } from '@react-three/fiber';
 import { Environment } from '@react-three/drei';
-import { EffectComposer, Noise, DepthOfField, Bloom } from '@react-three/postprocessing';
+import { EffectComposer, Bloom } from '@react-three/postprocessing';
 import * as THREE from 'three';
-import { Leva, useControls } from 'leva';
-import { BlendFunction } from 'postprocessing';
 
 /**
  * Iridescent spiral of thin discs ("chips") inspired by the reference image.
@@ -188,7 +186,7 @@ export default function IridescentSpiralScene() {
   };
 
   return (
-    <div className="h-full min-h-[600px] w-full bg-violet-100">
+    <div className="h-full min-h-[600px] w-full bg-[#DDDDEE]">
       <Canvas
         onCreated={onCreated}
         dpr={[1, 1.5]}
