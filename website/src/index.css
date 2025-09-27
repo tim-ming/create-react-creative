@@ -1,0 +1,141 @@
+@import 'tailwindcss';
+
+@font-face {
+  font-family: 'PP Neue Montreal';
+  src: url('/fonts/PPNeueMontreal-Thin.otf') format('opentype');
+  font-weight: 200;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'PP Neue Montreal';
+  src: url('/fonts/PPNeueMontreal-Book.otf') format('opentype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'PP Neue Montreal';
+  src: url('/fonts/PPNeueMontreal-Italic.otf') format('opentype');
+  font-weight: 300;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'PP Neue Montreal';
+  src: url('/fonts/PPNeueMontreal-Medium.otf') format('opentype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'PP Neue Montreal';
+  src: url('/fonts/PPNeueMontreal-SemiBolditalic.otf') format('opentype');
+  font-weight: 600;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'PP Neue Montreal';
+  src: url('/fonts/PPNeueMontreal-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@theme {
+  /*
+  ==========================================================================
+  THEME CONFIGURATION
+  ==========================================================================
+  - See: https://tailwindcss.com/docs/theme
+  */
+  --breakpoint-xs: 30rem;
+  --breakpoint-3xl: 120rem;
+
+  --font-sans: 'PP Neue Montreal', 'Inter', 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', sans-serif;
+  --font-mono: 'Geist Mono', 'Inter', 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', sans-serif;
+}
+
+@layer base {
+  /*
+  ==========================================================================
+  BASE STYLES
+  ==========================================================================
+  - See: https://tailwindcss.com/docs/adding-custom-styles#adding-base-styles
+  */
+  * {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply bg-slate-950 text-slate-100;
+    font-family: var(--font-sans);
+  }
+
+  #root {
+    min-height: 100vh;
+  }
+  .section-container {
+    @apply mx-auto w-full max-w-5xl px-4 sm:px-8 lg:px-12;
+  }
+  .section-container-wide {
+    @apply mx-auto w-full max-w-6xl px-4 sm:px-8 lg:px-12;
+  }
+  .section-container-narrow {
+    @apply mx-auto w-full max-w-4xl px-4 sm:px-8 lg:px-12;
+  }
+}
+
+@layer components {
+  /*
+  ==========================================================================
+  COMPONENT STYLES
+  ==========================================================================
+  - Reusable UI components.
+  - Improve code readability and maintainability.
+  */
+  .counter-btn {
+    @apply h-12 w-12 cursor-pointer rounded bg-neutral-300/50 text-black backdrop-blur-sm transition hover:bg-neutral-100/80;
+  }
+  .stack-logo {
+    @apply h-16 w-16 transition duration-300 md:h-24 md:w-24;
+  }
+  .glow {
+    box-shadow: 0 0 20px 0px rgba(56, 189, 248, 0.3);
+  }
+}
+
+@keyframes hero-marquee {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-100%, 0, 0);
+  }
+}
+
+@keyframes hero-marquee2 {
+  0% {
+    transform: translate3d(100%, 0, 0);
+  }
+  100% {
+    transform: translate3d(0%, 0, 0);
+  }
+}
+@layer utilities {
+  .animate-marquee {
+    animation: hero-marquee 30s linear infinite;
+  }
+
+  .animate-marquee2 {
+    animation: hero-marquee2 30s linear infinite;
+  }
+}
