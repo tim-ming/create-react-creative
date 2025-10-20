@@ -13,7 +13,7 @@ export default {
     [
       '@semantic-release/commit-analyzer',
       {
-        preset: 'conventionalcommits',
+        preset: 'angular',
         releaseRules: [{ type: 'chore', scope: 'deps-template', release: 'patch' }],
       },
     ],
